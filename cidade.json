@@ -1,10 +1,10 @@
 {
-  "versao": 2,
-  "atualizado_em": "2026-11-23T18:24:03.661Z",
+  "versao": 3,
+  "atualizado_em": "2026-11-23T16:11:23-03:00",
   "lancamento": "2026-11-24",
   "meta": 9750,
-  "arrecadado": 1,
-  "doacoes": 1,
+  "arrecadado": 2,
+  "doacoes": 2,
   "aviso": "",
   "moradores": [
     {
@@ -13,6 +13,18 @@
       "rede": "instagram",
       "profissao": "Policial",
       "cor_casa": "amarelo",
+      "nivel": "morador",
+      "chegou_em": "2026-11-23",
+      "conquistas": [
+        "fundador"
+      ]
+    },
+    {
+      "id": "testemorador",
+      "arroba": "@testemorador",
+      "rede": "tiktok",
+      "profissao": "Tiktoker",
+      "cor_casa": "roxo",
       "nivel": "morador",
       "chegou_em": "2026-11-23",
       "conquistas": [
