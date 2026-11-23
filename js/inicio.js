@@ -45,7 +45,7 @@
         ${CE.linkSeguro(p.video) ? `<p><a class="pill azul" href="${e(CE.linkSeguro(p.video))}" target="_blank" rel="noopener">▶ Ver vídeo</a></p>` : ""}</div>`).join("")
       : `<div class="cartao">A obra começa já já…</div>`;
     // rodapé
-    $("perfil").textContent = cfg.perfil || "@cidadeesperanca";
+    $("perfil").textContent = cfg.perfil || "@cidadeep";
     $("redes").innerHTML = [cfg.tiktok && `<a class="pill" href="${e(CE.linkSeguro(cfg.tiktok))}" target="_blank" rel="noopener">🎵 TikTok</a>`,
       cfg.instagram && `<a class="pill roxo" href="${e(CE.linkSeguro(cfg.instagram))}" target="_blank" rel="noopener">📸 Instagram</a>`].filter(Boolean).join(" ");
   }
