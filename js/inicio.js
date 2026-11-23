@@ -120,6 +120,7 @@
           <label class="campo" for="f-lcont">Contato da loja (Instagram, WhatsApp ou site)</label><input type="text" id="f-lcont" maxlength="80" value="${e(est.loja_contato)}">
           <p class="nota">As fotos dos produtos você manda no WhatsApp junto com o comprovante.</p>` : ""}
         ${estatua ? `<label class="campo" for="f-frase">🗽 Frase da sua estátua</label><input type="text" id="f-frase" maxlength="50" value="${e(est.frase)}">` : ""}
+        <input type="text" id="f-hp" tabindex="-1" autocomplete="off" class="so-leitores" aria-hidden="true">
         <label class="check"><input type="checkbox" id="f-ok" ${est.ok ? "checked" : ""}> Autorizo que meu @${loja ? " e minha lojinha" : ""} apareçam na cidade e nos vídeos. Li as regras (sem sorteio; lojinha só com produto legal).</label>
         <p class="erro" id="f-erro"></p>
         <div class="acoes"><button class="btn branco" id="f-voltar">⬅ Voltar</button><button class="btn verde grande" id="f-seguir">Ir pro PIX ➜</button></div>`);
@@ -131,40 +132,80 @@
         if (estatua) est.frase = $("f-frase").value.trim();
       };
       $("f-voltar").onclick = () => { pega(); est.passo = 1; render(); };
-      $("f-seguir").onclick = () => {
+      $("f-seguir").onclick = async () => {
         pega();
         if (!est.ok) { $("f-erro").textContent = "Marque a autorização pra continuar."; return; }
         if (loja && !est.loja_nome) { $("f-erro").textContent = "Dê um nome pra sua lojinha 🙂"; return; }
+        // código curto que aparece no PIX e na planilha (pra achar a doação no extrato)
+        const chave = JSON.stringify([est.valor, est.arroba, est.rede, est.profissao, est.cor, est.loja_nome, est.produtos, est.frase]);
+        if (est.enviado !== chave) {
+          const L = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+          est.codigo = "CE" + Array.from({ length: 4 }, () => L[Math.floor(Math.random() * L.length)]).join("");
+          $("f-seguir").disabled = true; $("f-seguir").textContent = "Guardando…";
+          await CE.enviarDoacao(cfg, { codigo: est.codigo, item: ITENS[est.item].nome, valor: est.valor, arroba: est.arroba, rede: est.rede,
+            profissao: est.profissao, cor: est.cor, loja_nome: loja ? est.loja_nome : "", loja_tipo: loja ? est.loja_tipo : "",
+            loja_vende: loja ? est.loja_vende : "", produtos: loja ? est.produtos : "", loja_contato: loja ? est.loja_contato : "",
+            frase: estatua ? est.frase : "", hp: ($("f-hp") || {}).value || "" });
+          est.enviado = chave;
+        }
         est.passo = 3; render();
       };
-    } else {
+    } else if (est.passo === 3) {
       const temPix = !!(cfg.pix_chave && cfg.pix_chave.trim());
-      const codigo = temPix ? PIX.gerar({ chave: cfg.pix_chave, nome: cfg.pix_nome, cidade: cfg.pix_cidade, valor: est.valor, txid: "CIDADE" + Date.now().toString().slice(-8) }) : "";
+      const auto = !!cfg.planilha_url;
+      const codigo = temPix ? PIX.gerar({ chave: cfg.pix_chave, nome: cfg.pix_nome, cidade: cfg.pix_cidade, valor: est.valor,
+        txid: est.codigo || "CIDADE", descricao: "Cidade Esperanca " + (est.codigo || "") }) : "";
       modalAbre(`${passos(3)}<h2>💚 Pague ${CE.reais(est.valor)} no PIX</h2>
+        ${est.codigo ? `<p>Seu código: <span class="pill mini">${e(est.codigo)}</span> (ele vai junto no PIX)</p>` : ""}
         ${temPix ? `<p>Abra o app do seu banco e escaneie o QR Code ou use o <b>PIX copia e cola</b>:</p>
           <div class="qr" id="qr"></div><div class="copia" id="copia">${e(codigo)}</div>
           <div class="acoes"><button class="btn" id="b-copia">📋 Copiar código PIX</button></div>`
         : `<p class="erro">A chave PIX ainda não foi configurada neste site. Tente de novo mais tarde 🙏</p>`}
-        <h3 style="margin:18px 0 4px">Depois de pagar:</h3>
-        <p>Toque no botão abaixo e envie a mensagem pronta <b>com o comprovante</b> no WhatsApp. Assim que o pagamento for confirmado, sua casa entra na cidade! 🏠</p>
-        <div class="acoes"><button class="btn branco" id="p-voltar">⬅ Voltar</button>
-          <a class="btn verde grande" id="b-zap" target="_blank" rel="noopener">📲 Enviar comprovante</a></div>
-        <p class="nota">Nenhum dado é guardado neste site. Você só fala comigo pelo WhatsApp.</p>`);
+        ${auto ? `<div class="acoes"><button class="btn branco" id="p-voltar">⬅ Voltar</button>
+            <button class="btn verde grande" id="b-pago">✅ Já paguei</button></div>
+            <p class="nota">Não precisa mandar comprovante: assim que o PIX for conferido, sua casa aparece sozinha na cidade.</p>`
+        : `<h3 style="margin:18px 0 4px">Depois de pagar:</h3>
+            <p>Toque no botão abaixo e envie a mensagem pronta <b>com o comprovante</b> no WhatsApp. Assim que o pagamento for confirmado, sua casa entra na cidade! 🏠</p>
+            <div class="acoes"><button class="btn branco" id="p-voltar">⬅ Voltar</button>
+            <a class="btn verde grande" id="b-zap" target="_blank" rel="noopener">📲 Enviar comprovante</a></div>`}`);
       if (temPix && window.QRCode) new QRCode($("qr"), { text: codigo, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
       if (temPix) $("b-copia").onclick = async () => {
         try { await navigator.clipboard.writeText(codigo); $("b-copia").textContent = "✅ Copiado!"; }
         catch (err) { const r = document.createRange(); r.selectNodeContents($("copia")); getSelection().removeAllRanges(); getSelection().addRange(r); }
       };
       $("p-voltar").onclick = () => { est.passo = 2; render(); };
-      const linhas = [`Oi! Acabei de doar ${CE.reais(est.valor)} pra Cidade Esperança 💛 (segue o comprovante)`,
-        `🏠 Item: ${ITENS[est.item].nome}`, `@: ${est.arroba || "(morador misterioso)"}`, `Bairro: ${CE.BAIRROS[est.rede].nome}`,
-        `Profissão: ${est.profissao || "-"}`, `Cor da casa: ${est.cor}`];
-      if (est.valor >= 50) linhas.push(`🛍️ Lojinha: ${est.loja_nome}`, `Tipo: ${est.loja_tipo}`, `Vende: ${est.loja_vende || "-"}`, `Produtos:\n${est.produtos || "-"}`, `Contato: ${est.loja_contato || "-"}`);
-      if (est.valor >= 100) linhas.push(`🗽 Frase da estátua: ${est.frase || "-"}`);
-      linhas.push(`✅ Autorizo aparecer na cidade e nos vídeos.`);
+      if (auto) $("b-pago").onclick = () => { est.passo = 4; render(); };
+      else {
+        const num = String(cfg.whatsapp || "").replace(/\D/g, "");
+        $("b-zap").href = num ? `https://wa.me/${num}?text=${encodeURIComponent(mensagem())}` : "#";
+        if (!num) $("b-zap").onclick = ev => { ev.preventDefault(); alert("O WhatsApp ainda não foi configurado neste site."); };
+      }
+    } else {
       const num = String(cfg.whatsapp || "").replace(/\D/g, "");
-      $("b-zap").href = num ? `https://wa.me/${num}?text=${encodeURIComponent(linhas.join("\n"))}` : "#";
-      if (!num) $("b-zap").onclick = ev => { ev.preventDefault(); alert("O WhatsApp ainda não foi configurado neste site."); };
+      const busca = est.arroba ? `cidade.html?morador=${encodeURIComponent(est.arroba)}` : "cidade.html";
+      modalAbre(`<div class="centro"><div style="font-size:4rem">🏗️</div><h2 style="margin:0 0 8px">Obrigado! Sua casa está a caminho 💛</h2>
+        <p>Assim que o PIX for conferido, ela aparece na cidade${est.arroba ? ` com o <b>${e(est.arroba)}</b>` : ""}. Normalmente no mesmo dia.</p>
+        <p>Depois é só tocar em <b>🔍 Cadê minha casa?</b> e o drone te leva até lá. E fica de olho no próximo vídeo 👀</p>
+        <div class="acoes" style="justify-content:center">
+          <a class="btn verde" href="${busca}">🏙️ Ver a cidade</a>
+          <button class="btn branco" id="b-share">📤 Chamar um amigo</button></div>
+        ${num ? `<p class="nota">Deu algum problema? <a href="https://wa.me/${num}?text=${encodeURIComponent(mensagem())}" target="_blank" rel="noopener">Me chama no WhatsApp</a></p>` : ""}</div>`);
+      $("b-share").onclick = () => {
+        const url = location.href.split("#")[0].split("?")[0];
+        if (navigator.share) navigator.share({ title: "Cidade Esperança", text: "Me ajuda a construir a Cidade Esperança! Cada doação vira uma casa 🏠", url }).catch(() => {});
+        else { navigator.clipboard && navigator.clipboard.writeText(url); alert("Link copiado!"); }
+      };
     }
+  }
+
+  function mensagem() {
+    const linhas = [`Oi! Acabei de doar ${CE.reais(est.valor)} pra Cidade Esperança 💛 (segue o comprovante)`,
+      est.codigo ? `Código: ${est.codigo}` : "",
+      `🏠 Item: ${ITENS[est.item].nome}`, `@: ${est.arroba || "(morador misterioso)"}`, `Bairro: ${CE.BAIRROS[est.rede].nome}`,
+      `Profissão: ${est.profissao || "-"}`, `Cor da casa: ${est.cor}`];
+    if (est.valor >= 50) linhas.push(`🛍️ Lojinha: ${est.loja_nome}`, `Tipo: ${est.loja_tipo}`, `Vende: ${est.loja_vende || "-"}`, `Produtos:\n${est.produtos || "-"}`, `Contato: ${est.loja_contato || "-"}`);
+    if (est.valor >= 100) linhas.push(`🗽 Frase da estátua: ${est.frase || "-"}`);
+    linhas.push(`✅ Autorizo aparecer na cidade e nos vídeos.`);
+    return linhas.filter(Boolean).join("\n");
   }
 })();

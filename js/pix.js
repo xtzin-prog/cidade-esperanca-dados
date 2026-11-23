@@ -19,8 +19,10 @@
     if (dig.length === 11 && /[.\-]/.test(c)) return dig;          // CPF com pontuação
     return c;
   }
-  function gerar({ chave, nome, cidade, valor, txid }) {
-    const conta = tlv("00", "br.gov.bcb.pix") + tlv("01", normalizaChave(chave));
+  function gerar({ chave, nome, cidade, valor, txid, descricao }) {
+    let conta = tlv("00", "br.gov.bcb.pix") + tlv("01", normalizaChave(chave));
+    const desc = semAcento(descricao).slice(0, Math.max(0, 99 - conta.length - 4));
+    if (desc) conta += tlv("02", desc);
     let p = tlv("00", "01") + tlv("26", conta) + tlv("52", "0000") + tlv("53", "986");
     if (valor && valor > 0) p += tlv("54", Number(valor).toFixed(2));
     p += tlv("58", "BR") + tlv("59", semAcento(nome).slice(0, 25) || "CIDADE ESPERANCA") + tlv("60", semAcento(cidade).slice(0, 15) || "BRASIL");

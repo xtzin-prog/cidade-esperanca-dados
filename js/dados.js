@@ -47,26 +47,63 @@
     return r.json();
   }
 
+  // junta o cidade.json (fixo, editado pelo chat) com a planilha (doações com ✅)
+  function junta(fixo, vivo) {
+    if (!vivo) return fixo;
+    const d = Object.assign({}, fixo);
+    const vistos = new Set((fixo.moradores || []).map(m => (m.arroba || "").toLowerCase()).filter(Boolean));
+    d.moradores = (fixo.moradores || []).concat((vivo.moradores || []).filter(m => !m.arroba || !vistos.has(m.arroba.toLowerCase())));
+    d.lojinhas = (fixo.lojinhas || []).concat(vivo.lojinhas || []);
+    d.estatuas = (fixo.estatuas || []).concat(vivo.estatuas || []);
+    d.arrecadado = (Number(fixo.arrecadado) || 0) + (Number(vivo.arrecadado) || 0);
+    d.doacoes = (Number(fixo.doacoes) || 0) + (Number(vivo.doacoes) || 0);
+    return d;
+  }
+
+  // conquistas automáticas: 10 primeiros = fundador, primeira lojinha = primeiro lojista
+  function conquistas(v) {
+    const ord = v.moradores.slice().sort((a, b) => (a.chegou_em || "").localeCompare(b.chegou_em || "") || String(a.id).localeCompare(String(b.id)));
+    ord.forEach((m, n) => { m.conquistas = (m.conquistas || []).slice(); if (n < 10 && !m.conquistas.includes("fundador")) m.conquistas.push("fundador"); });
+    const donos = new Set(v.lojinhas.map(l => (l.dono || "").toLowerCase()));
+    const primeiro = ord.find(m => m.arroba && donos.has(m.arroba.toLowerCase()));
+    if (primeiro && !primeiro.conquistas.includes("primeiro_lojista")) primeiro.conquistas.push("primeiro_lojista");
+    v.estatuas.forEach(e => { const m = ord.find(x => x.arroba && x.arroba.toLowerCase() === (e.arroba || "").toLowerCase()); if (m && !m.conquistas.includes("estatua")) m.conquistas.push("estatua"); });
+    return v;
+  }
+
+  let _cfg = null;
+  async function config() {
+    if (_cfg) return _cfg;
+    for (const f of ["config.json", BASE + "config.json"]) {
+      try { _cfg = await busca(f); return _cfg; } catch (e) {}
+    }
+    _cfg = {}; return _cfg;
+  }
+
   async function carregar() {
-    for (const f of FONTES) {
-      try {
-        const d = await busca(f);
-        try { localStorage.setItem("ce_cidade", JSON.stringify(d)); } catch (e) {}
-        return normaliza(d);
-      } catch (e) { /* tenta a próxima */ }
+    const cfg = await config();
+    let fixo = null, vivo = null;
+    for (const f of FONTES) { try { fixo = await busca(f); break; } catch (e) {} }
+    if (cfg.planilha_url) { try { vivo = await busca(cfg.planilha_url); } catch (e) {} }
+    if (fixo) {
+      const d = junta(fixo, vivo);
+      try { localStorage.setItem("ce_cidade", JSON.stringify(d)); } catch (e) {}
+      return conquistas(normaliza(d));
     }
     try {
       const c = localStorage.getItem("ce_cidade");
-      if (c) return normaliza(JSON.parse(c));
+      if (c) return conquistas(normaliza(JSON.parse(c)));
     } catch (e) {}
     return normaliza(null);
   }
 
-  async function config() {
-    for (const f of ["config.json", BASE + "config.json"]) {
-      try { return await busca(f); } catch (e) {}
-    }
-    return {};
+  // manda a doação pra planilha (sem esperar resposta: o Google não deixa ler)
+  async function enviarDoacao(cfg, dados) {
+    if (!cfg.planilha_url) return false;
+    try {
+      await fetch(cfg.planilha_url, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(dados) });
+      return true;
+    } catch (e) { return false; }
   }
 
   function dia(d) {
@@ -97,5 +134,5 @@
     return d && m ? `${d}/${m}/${a}` : s;
   }
 
-  window.CE = { carregar, config, dia, reais, esc, linkSeguro, dataBR, BAIRROS, CORES_CASA, TIPOS_LOJA, CONQUISTAS };
+  window.CE = { carregar, config, enviarDoacao, dia, reais, esc, linkSeguro, dataBR, BAIRROS, CORES_CASA, TIPOS_LOJA, CONQUISTAS };
 })();
