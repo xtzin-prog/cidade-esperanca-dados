@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Cidade Esperança — Ver a cidade</title>
+<meta name="description" content="Explore a Cidade Esperança: cada doação vira um morador, uma casa ou uma lojinha.">
+<link rel="icon" href="img/icone.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+<div class="carregando" id="carregando">🏗️ Carregando a cidade…</div>
+
+<div class="tela-jogo"><canvas id="mapa" aria-label="Mapa da Cidade Esperança"></canvas></div>
+
+<div class="hud">
+  <div class="linha">
+    <a class="pill branco" href="index.html" aria-label="Voltar ao início">⬅ INÍCIO</a>
+    <span class="pill branco" id="hud-dia">DIA 1</span>
+    <span class="pill branco" id="hud-mor">🏠 0</span>
+    <span class="pill branco" id="hud-lojas">🛍️ 0</span>
+  </div>
+  <div class="meta"><div class="enche" id="hud-enche"></div><div class="txt" id="hud-meta">META DA CIRURGIA</div></div>
+  <div class="aviso" id="hud-aviso" hidden></div>
+</div>
+
+<div class="controles">
+  <button id="b-busca" title="Cadê minha casa?" aria-label="Cadê minha casa?">🔍</button>
+  <button id="b-hosp" title="Ir pro hospital" aria-label="Ir pro hospital">🏥</button>
+  <button id="b-shop" title="Shopping (todas as lojinhas)" aria-label="Shopping">🛍️</button>
+  <button id="b-centro" title="Centralizar" aria-label="Centralizar">🎯</button>
+  <button id="b-mini" title="Minimapa" aria-label="Minimapa">🗺️</button>
+  <button id="b-lista" title="Lista de moradores" aria-label="Lista de moradores">📋</button>
+</div>
+<canvas class="minimapa" id="minimapa" width="300" height="300"></canvas>
+
+<div class="rodape-jogo">
+  <div class="ticker" id="ticker"><span>🏗️ Bem-vindo à Cidade Esperança! Cada doação vira um morador.</span></div>
+  <a class="btn verde grande" href="index.html#doar">🏠 QUERO MORAR NA CIDADE</a>
+</div>
+
+<div class="fundo-modal" id="modal"><div class="modal cartao" role="dialog" aria-modal="true">
+  <button class="fechar" id="m-fechar" aria-label="Fechar">✕</button>
+  <div id="m-corpo"></div>
+</div></div>
+
+<div class="loja-dentro" id="loja"></div>
+
+<script src="js/dados.js"></script>
+<script src="js/motor-cidade.js"></script>
+<script src="js/jogo.js"></script>
+</body>
+</html>

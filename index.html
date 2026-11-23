@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cidade Esperança — cada doação constrói a cidade</title>
+<meta name="description" content="Uma cidade construída com doações: cada apoio vira um morador com casa, lojinha ou estátua, e o hospital sobe até a cirurgia acontecer.">
+<meta property="og:title" content="Cidade Esperança">
+<meta property="og:description" content="Doe qualquer valor e ganhe sua casa na cidade. Me ajude a fazer minha cirurgia de estrabismo!">
+<meta property="og:image" content="img/icone.png">
+<link rel="icon" href="img/icone.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+
+<div class="hud">
+  <div class="linha">
+    <span class="pill branco" id="hud-dia">DIA 1</span>
+    <span class="pill branco" id="hud-mor">🏠 0 MORADORES</span>
+    <span class="pill branco" id="hud-lojas">🛍️ 0 LOJINHAS</span>
+  </div>
+  <div class="meta"><div class="enche" id="hud-enche"></div><div class="txt" id="hud-meta">META DA CIRURGIA</div></div>
+  <div class="aviso" id="hud-aviso" hidden></div>
+</div>
+
+<main class="pagina">
+  <h1 class="titulo-jogo"><span class="a">CIDADE</span><span class="b">ESPERANÇA</span></h1>
+  <p class="sub">Essa cidade não é feita de seguidores.<br>Ela é construída com <b>doações</b> 💛</p>
+
+  <a class="previa" href="cidade.html" aria-label="Ver a cidade inteira">
+    <canvas id="previa"></canvas>
+    <span class="chamada btn grande">🏙️ VER A CIDADE</span>
+  </a>
+  <div class="centro" style="margin-top:18px"><button class="btn verde grande" data-doar>🏠 QUERO MORAR NA CIDADE</button></div>
+
+  <section class="secao">
+    <h2>🏥 A obra do hospital</h2>
+    <div class="cartao obra">
+      <p style="margin:0">No meio da cidade tem um hospital em obra. <b>Cada real faz ele subir.</b> Quando a obra chegar a 100%, eu faço a minha cirurgia de estrabismo.</p>
+      <div class="barra"><div id="obra-barra"></div></div>
+      <p style="margin:0;font-size:1.2rem" id="obra-txt"></p>
+    </div>
+  </section>
+
+  <section class="secao">
+    <h2>🎮 Como funciona</h2>
+    <div class="grade">
+      <div class="cartao passo"><div class="icone">💚</div><h3>1. Doe qualquer valor</h3><p>Pelo PIX, direto e seguro.</p></div>
+      <div class="cartao passo"><div class="icone">✍️</div><h3>2. Diga o seu @</h3><p>Escolha sua profissão e a cor da sua casa.</p></div>
+      <div class="cartao passo"><div class="icone">🎥</div><h3>3. Apareça no vídeo</h3><p>Sua casa entra na cidade e o drone te procura no próximo vídeo!</p></div>
+    </div>
+  </section>
+
+  <section class="secao" id="doar">
+    <h2>🛒 Lojinha da cidade</h2>
+    <p class="sub" style="font-size:1.05rem">Escolha o que você quer construir:</p>
+    <div class="grade">
+      <div class="cartao item-loja"><div class="icone">🏠</div><h3 style="margin:0">Morador + Casa</h3>
+        <p>Você vira morador com o seu @, a profissão que quiser e uma casa na cidade.</p>
+        <div class="preco">Qualquer valor</div><button class="btn verde" data-doar="morador">Quero morar</button></div>
+      <div class="cartao item-loja destaque"><div class="icone">🛍️</div><h3 style="margin:0">Lojinha na cidade</h3>
+        <p>Além da casa, você ganha uma lojinha. Venda o que quiser! Ela é divulgada no próximo vídeo.</p>
+        <div class="preco">R$ 50</div><button class="btn" data-doar="lojinha">Quero uma lojinha</button></div>
+      <div class="cartao item-loja"><div class="icone">🗽</div><h3 style="margin:0">Estátua na praça</h3>
+        <p>Casa + lojinha + uma estátua dourada sua na Praça da Esperança.</p>
+        <div class="preco">R$ 100</div><button class="btn roxo" data-doar="estatua">Quero minha estátua</button></div>
+    </div>
+  </section>
+
+  <section class="secao lista-lojas">
+    <h2>🛍️ Vitrine das lojinhas</h2>
+    <div class="grade" id="vitrine"></div>
+  </section>
+
+  <section class="secao bairros">
+    <h2>🏆 Disputa dos bairros</h2>
+    <div class="cartao" id="bairros"></div>
+  </section>
+
+  <section class="secao" id="enquete-sec" hidden>
+    <h2>🗳️ Votação da cidade</h2>
+    <div class="cartao" id="enquete"></div>
+  </section>
+
+  <section class="secao diario">
+    <h2>📓 Diário de obra</h2>
+    <div id="diario"></div>
+  </section>
+
+  <section class="secao">
+    <h2>💛 Minha história</h2>
+    <div class="cartao">
+      <p>Desde pequeno convivo com estrabismo no olho direito. Essa condição me acompanha há muitos anos e acaba me atrapalhando tanto no dia a dia quanto profissionalmente.</p>
+      <p>A cirurgia é uma oportunidade de corrigir o alinhamento do meu olho e melhorar minha qualidade de vida. Infelizmente, não consigo arcar sozinho com esse custo.</p>
+      <p>Por isso criei a Cidade Esperança: em vez de só pedir, quero que cada pessoa que me ajudar <b>faça parte dessa história</b>, com a sua casa, a sua lojinha e o seu nome nessa cidade. Muito obrigado! 💛</p>
+    </div>
+  </section>
+
+  <section class="secao faq">
+    <h2>❓ Perguntas</h2>
+    <details><summary>Como eu apareço na cidade?</summary><p>Depois de pagar o PIX, você toca em "Enviar comprovante" e manda a mensagem pronta no WhatsApp. Assim que o pagamento é confirmado, sua casa entra no mapa e você aparece no próximo vídeo.</p></details>
+    <details><summary>Tem sorteio?</summary><p>Não. Ninguém precisa ter sorte: todo mundo que ajudar ganha a casa e, quando a meta for batida, um vídeo animado só seu, com a sua casa na cidade.</p></details>
+    <details><summary>O que posso vender na lojinha?</summary><p>Qualquer produto ou serviço legal. Não aceito conteúdo adulto, apostas, armas, remédios, golpes ou pirâmides. A venda é direto entre você e quem comprar.</p></details>
+    <details><summary>Meus dados aparecem?</summary><p>Não. Na cidade só aparece o que você autorizar: o seu @, a profissão e a sua lojinha. Este site não guarda nenhum dado seu.</p></details>  </section>
+</main>
+
+<footer>
+  <p>Siga <span id="perfil">@cidadeesperanca</span> e acompanhe a cidade crescer 🏙️</p>
+  <p id="redes"></p>
+</footer>
+
+<a class="btn azul flutuante" href="cidade.html">🏙️ VER A CIDADE</a>
+
+<div class="fundo-modal" id="modal"><div class="modal cartao" role="dialog" aria-modal="true">
+  <button class="fechar" id="m-fechar" aria-label="Fechar">✕</button>
+  <div id="m-corpo"></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="js/dados.js"></script>
+<script src="js/motor-cidade.js"></script>
+<script src="js/pix.js"></script>
+<script src="js/inicio.js"></script>
+</body>
+</html>
