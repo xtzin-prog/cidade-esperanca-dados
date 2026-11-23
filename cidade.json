@@ -1,41 +1,35 @@
 {
-  "versao": 1,
-  "atualizado_em": "2026-11-23T12:00:00-03:00",
+  "versao": 2,
+  "atualizado_em": "2026-11-23T18:24:03.661Z",
   "lancamento": "2026-11-24",
   "meta": 9750,
-  "arrecadado": 0,
-  "doacoes": 0,
-  "obra_extra": "",
+  "arrecadado": 1,
+  "doacoes": 1,
   "aviso": "",
   "moradores": [
     {
-      "id": "exemplo-1",
-      "arroba": "@exemplo",
-      "rede": "tiktok",
-      "profissao": "Padeiro",
-      "cor_casa": "vermelho",
+      "id": "joao154",
+      "arroba": "@joao154",
+      "rede": "instagram",
+      "profissao": "Policial",
+      "cor_casa": "amarelo",
       "nivel": "morador",
-      "chegou_em": "2026-11-24",
-      "conquistas": ["fundador"],
-      "exemplo": true
+      "chegou_em": "2026-11-23",
+      "conquistas": [
+        "fundador"
+      ]
     }
   ],
-  "lojinhas": [
-    {
-      "id": "loja-exemplo-1",
-      "dono": "@exemplo",
-      "nome": "Lojinha do Exemplo",
-      "vende": "Bolos caseiros e doces",
-      "contato": "https://instagram.com/exemplo",
-      "fotos": [],
-      "exemplo": true
-    }
-  ],
+  "lojinhas": [],
   "estatuas": [],
   "enquete": {
     "ativa": true,
     "pergunta": "Qual a próxima construção da cidade?",
-    "opcoes": ["Praça com parquinho", "Campo de futebol", "Sorveteria"]
+    "opcoes": [
+      "Praça com parquinho",
+      "Campo de futebol",
+      "Sorveteria"
+    ]
   },
   "diario": [
     {
