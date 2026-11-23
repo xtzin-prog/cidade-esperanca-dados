@@ -50,6 +50,10 @@
       cfg.instagram && `<a class="pill roxo" href="${e(CE.linkSeguro(cfg.instagram))}" target="_blank" rel="noopener">📸 Instagram</a>`].filter(Boolean).join(" ");
   }
   hud(dados); secoes(dados);
+  // botão flutuante "VER A CIDADE" só aparece depois de rolar a página (não cobre os botões do topo)
+  const flut = document.querySelector(".flutuante");
+  const mostraFlut = () => flut && flut.classList.toggle("on", window.scrollY > 650);
+  window.addEventListener("scroll", mostraFlut, { passive: true }); mostraFlut();
 
   // prévia animada da cidade
   const prev = new CidadeJogo($("previa"), { interativo: false, rotulos: true });

@@ -211,12 +211,25 @@
     }
     pilula(x, y, txt, fundo, cor, tam) {
       const c = this.ctx; tam = (tam || 11) * Math.min(1.5, Math.max(.6, Math.pow(1 / this.z, .55)));
-      c.font = `800 ${tam}px "Baloo 2", system-ui, sans-serif`;
-      const w = c.measureText(txt).width + tam * 1.2, h = tam * 1.6;
+      // o emoji do começo é medido/desenhado à parte (no iPhone o measureText erra a largura dos emojis)
+      let ic = "", resto = String(txt);
+      const m = resto.match(/^(\S+)\s+([\s\S]*)$/);
+      if (m && /[^\u0000-ɏ]/.test(m[1]) && !/[A-Za-z0-9@]/.test(m[1])) { ic = m[1]; resto = m[2]; }
+      const fonte = `800 ${tam}px "Baloo 2", system-ui, sans-serif`;
+      c.font = fonte;
+      const wt = c.measureText(resto).width, wi = ic ? tam * 1.35 : 0, pad = tam * .65;
+      const w = wt + wi + pad * 2, h = tam * 1.6;
       c.fillStyle = "rgba(0,0,0,.25)"; this.rr(x - w / 2 + 1.5, y - h + 2.5, w, h, h / 2); c.fill();
       c.fillStyle = fundo || "#fff"; this.rr(x - w / 2, y - h, w, h, h / 2); c.fill();
       c.lineWidth = 1.6; c.strokeStyle = "#1a1a1a"; c.stroke();
-      c.fillStyle = cor || "#1a1a1a"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(txt, x, y - h / 2 + .5);
+      const x0 = x - w / 2 + pad, ym = y - h / 2 + .5;
+      c.textBaseline = "middle";
+      if (ic) {
+        c.font = `${tam * .95}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+        c.textAlign = "center"; c.fillStyle = "#1a1a1a"; c.fillText(ic, x0 + wi * .45, ym);
+        c.font = fonte;
+      }
+      c.fillStyle = cor || "#1a1a1a"; c.textAlign = "left"; c.fillText(resto, x0 + wi, ym);
       return [x - w / 2, y - h, w, h];
     }
     rr(x, y, w, h, r) { const c = this.ctx; c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
