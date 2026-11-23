@@ -1,0 +1,48 @@
+{
+  "versao": 1,
+  "atualizado_em": "2026-11-23T12:00:00-03:00",
+  "lancamento": "2026-11-24",
+  "meta": 9750,
+  "arrecadado": 0,
+  "doacoes": 0,
+  "obra_extra": "",
+  "aviso": "",
+  "moradores": [
+    {
+      "id": "exemplo-1",
+      "arroba": "@exemplo",
+      "rede": "tiktok",
+      "profissao": "Padeiro",
+      "cor_casa": "vermelho",
+      "nivel": "morador",
+      "chegou_em": "2026-11-24",
+      "conquistas": ["fundador"],
+      "exemplo": true
+    }
+  ],
+  "lojinhas": [
+    {
+      "id": "loja-exemplo-1",
+      "dono": "@exemplo",
+      "nome": "Lojinha do Exemplo",
+      "vende": "Bolos caseiros e doces",
+      "contato": "https://instagram.com/exemplo",
+      "fotos": [],
+      "exemplo": true
+    }
+  ],
+  "estatuas": [],
+  "enquete": {
+    "ativa": true,
+    "pergunta": "Qual a próxima construção da cidade?",
+    "opcoes": ["Praça com parquinho", "Campo de futebol", "Sorveteria"]
+  },
+  "diario": [
+    {
+      "data": "2026-11-24",
+      "titulo": "Dia 1: a cidade começou!",
+      "texto": "Zero moradores, um terreno vazio e um hospital em obra. Quem vai ser o primeiro morador?",
+      "video": ""
+    }
+  ]
+}
