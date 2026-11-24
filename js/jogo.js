@@ -188,14 +188,14 @@
     };
     aoFechar = () => { editando = false; if (!salvo) Object.assign(m, { cor_casa: orig.cor_casa, telhado: orig.telhado, pet: orig.pet, carro: orig.carro, placa: orig.placa }), o.cor = orig.cor; };
     jogo.destaque = null;
-    jogo.voarPara(o.i + .5, o.j + .5, 2.4, null, jogo.H * .14 / 2.4);
+    jogo.voarPara(o.i + 1, o.j + 1, 2.4, null, jogo.H * .14 / 2.4);
     tela();
   }
 
   // ---------------- dentro da lojinha
   function entraLoja(o) {
     const l = o.l, cor = CE.CORES_CASA[l.cor] || "#e8402a", ic = CE.TIPOS_LOJA[l.tipo] || "🛍️";
-    jogo.voarPara(o.i + .5, o.j + .5, 2.6);
+    jogo.voarPara(o.i + 1, o.j + 1, 2.6);
     const contato = CE.linkSeguro(l.contato);
     const prods = (l.produtos && l.produtos.length ? l.produtos : (l.fotos || []).map((f, n) => ({ nome: n === 0 ? l.vende : "", foto: f })));
     const cards = prods.length ? prods.map(p => `<div class="produto">
@@ -239,7 +239,7 @@
     const o = jogo.acharMorador(arroba);
     if (!o) { $("r-busca") && ($("r-busca").innerHTML = `Ainda não te encontrei… 😢 <a class="pill verde" href="index.html#doar">Doe e ganhe sua casa!</a>`); return; }
     fecha(); jogo.destaque = o;
-    jogo.voarPara(o.i + .5, o.j + .5, 2.2, () => setTimeout(() => cardMorador(o), 300));
+    jogo.voarPara(o.i + 1, o.j + 1, 2.2, () => setTimeout(() => cardMorador(o), 300));
   }
   $("b-shop").onclick = () => {
     const ls = jogo.lay.objs.filter(o => o.tipo === "loja");
@@ -254,7 +254,7 @@
     modal(`<h2>📋 Moradores (${ms.length})</h2>${ms.length ? ms.map((o, n) => `<button class="opcao" data-n="${n}" style="margin:6px 0">
       <span class="icone" style="color:${o.cor}">🏠</span><span><b>${e(o.m.arroba || "Morador misterioso")}</b>${e(o.m.profissao || "")} · ${e(CE.BAIRROS[o.m.rede].nome)}</span></button>`).join("")
       : "<p>Ninguém mudou pra cá ainda. Seja o primeiro morador!</p>"}`);
-    document.querySelectorAll("#m-corpo .opcao").forEach(b => b.onclick = () => { const o = ms[+b.dataset.n]; fecha(); jogo.destaque = o; jogo.voarPara(o.i + .5, o.j + .5, 2.2, () => cardMorador(o)); });
+    document.querySelectorAll("#m-corpo .opcao").forEach(b => b.onclick = () => { const o = ms[+b.dataset.n]; fecha(); jogo.destaque = o; jogo.voarPara(o.i + 1, o.j + 1, 2.2, () => cardMorador(o)); });
   };
 
   // ---------------- HUD
