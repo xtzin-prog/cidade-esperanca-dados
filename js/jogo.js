@@ -95,6 +95,7 @@
     else if (o.tipo === "placa") cardBairro(o);
     else if (o.tipo === "estatua") cardEstatua(o);
     else if (o.tipo === "outdoor") cardOutdoor();
+    else if (o.tipo === "banco") abrirBanco();
   }
 
   function cardOutdoor() {
@@ -148,7 +149,8 @@
     let salvo = false;
     editando = true; aplica();
     const N = CE.NIVEIS_CASA[info.casa_nivel] || CE.NIVEIS_CASA[1], prox = CE.NIVEIS_CASA[info.casa_nivel + 1];
-    const chips = (nome, mapa, atual) => `<div class="chips peq">${Object.entries(mapa).map(([k, v]) => `<button type="button" class="chip ${k === atual ? "sel" : ""}" data-${nome}="${k}">${e(v)}</button>`).join("")}</div>`;
+    const tem = k => (info.itens || []).includes(k);
+    const chips = (nome, mapa, atual) => `<div class="chips peq">${Object.entries(mapa).filter(([k]) => !CE.ITENS_RAROS[k] || tem(k)).map(([k, v]) => `<button type="button" class="chip ${k === atual ? "sel" : ""}" data-${nome}="${k}">${e(v)}</button>`).join("")}</div>`;
     const tela = () => {
       modal(`<h2>🔑 Casa de ${e(info.arroba)}</h2>
         <div class="nivel-casa"><span class="ic">${N.icone}</span><span>Nível ${info.casa_nivel}: <b>${N.nome}</b><br>
@@ -158,6 +160,7 @@
         <label class="campo">Telhado</label>${chips("tel", CE.TELHADOS, st.telhado)}
         <label class="campo">Pet</label>${chips("pet", CE.PETS, st.pet)}
         <label class="campo">Carro na garagem</label>${chips("car", CE.CARROS, st.carro)}
+        ${tem("ouro") && tem("dragao") ? "" : `<p class="nota">✨ Telhado de ouro e pet dragão: compre com Esperança Coins no <a href="#" id="e-banco">🏦 Banco da Cidade</a>.</p>`}
         <label class="campo" for="e-placa">🪧 Placa da porta (até 20 letras)</label>
         <input type="text" id="e-placa" maxlength="20" placeholder="Ex.: Lar doce lar" value="${e(st.placa)}">
         <label class="campo" for="e-out">📣 Recado no outdoor da cidade</label>
@@ -173,6 +176,7 @@
       $("e-placa").oninput = ev => { st.placa = ev.target.value; aplica(); };
       if ($("e-out")) $("e-out").oninput = ev => { st.outdoor = ev.target.value; };
       $("e-sair").onclick = fecha;
+      if ($("e-banco")) $("e-banco").onclick = ev => { ev.preventDefault(); fecha(); abrirBanco(); };
       $("e-salvar").onclick = async () => {
         $("e-salvar").disabled = true; $("e-salvar").textContent = "Salvando…";
         const r = await CE.chave(cfg, Object.assign({ acao: "salvar", codigo }, st));
@@ -190,6 +194,100 @@
     jogo.destaque = null;
     jogo.voarPara(o.i + 1, o.j + 1, 2.4, null, jogo.H * .14 / 2.4);
     tela();
+  }
+
+  // ---------------- 🏦 Banco da Cidade (moeda só do jogo)
+  const AVISO_EC = `<div class="aviso-ec">🪙 <b>Esperança Coins (EC)</b> são a moeda do jogo: cada R$ 1 doado vira 1 EC.
+    <b>Elas não valem dinheiro, não podem ser sacadas e não são investimento de verdade.</b>
+    Servem pra render no cofre, comprar itens raros e subir no ranking.</div>`;
+  const FESTA = `<p class="nota">🎉 <b>Depois da cirurgia</b>, o banco anuncia o <b>Dia da Festa</b>: todo morador ganha o mesmo presente (um vídeo personalizado), não importa quanto doou.</p>`;
+  const fmtEC = v => (Math.floor(Number(v) * 100) / 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+  function rankingHTML(n) {
+    const r = (dados.banco && dados.banco.ranking) || [];
+    return r.length ? `<ol class="ranking">${r.slice(0, n).map((x, k) => `<li><span>${["🥇", "🥈", "🥉"][k] || (k + 1) + "º"}</span><b>${e(x.arroba)}</b><span class="ec">🪙 ${x.investido} EC</span></li>`).join("")}</ol>`
+      : `<p>Ninguém guardou coins no cofre ainda… o 1º lugar pode ser seu!</p>`;
+  }
+  const erroChave = erro => ({ chave: "Não achei essa chave 🤔 Confere as letras e tenta de novo.",
+    pendente: "Sua doação ainda está sendo conferida. Assim que a casa aparecer na cidade, a chave funciona!",
+    espera: "Muitas tentativas agora. Espera uns minutinhos e tenta de novo.",
+    sem_arroba: "Essa doação foi feita sem @, então não dá pra abrir conta. Chama no direct que a gente resolve.",
+    off: "O banco ainda não está ativado neste site." }[erro] || "Não consegui falar com o banco agora. Tenta de novo em instantes.");
+  async function abrirBanco() {
+    const cfg = await CE.config();
+    const b = jogo.banco(); if (b) jogo.voarPara(b.i + 2, b.j + 2, Math.max(jogo.zMin, 1.1));
+    const ch = lerChave();
+    if (ch) {
+      modal(`<h2>🏦 Banco da Cidade</h2><p>Abrindo o cofre… 🔐</p>`);
+      const r = await CE.chave(cfg, { acao: "banco", codigo: ch });
+      if (r.ok) { telaBanco(r, ch, cfg); return; }
+    }
+    modal(`<h2>🏦 Banco da Cidade</h2>${AVISO_EC}
+      <h3 style="margin:14px 0 4px">🔓 Entrar na minha conta</h3>
+      <p style="margin:0 0 6px">Use a <b>chave da sua casa</b> (o código CE… que apareceu quando você doou).</p>
+      <form id="f-bchave"><input type="text" id="i-bchave" placeholder="CE……" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="14">
+      <div class="acoes"><button class="btn verde" type="submit" id="b-bentrar">🏦 Entrar no banco</button></div></form>
+      <p class="erro" id="r-bchave"></p>
+      <p class="nota">Ainda não é morador? <a href="index.html#doar">Doe a partir de R$ 1</a>: cada real vira 1 coin.</p>
+      <h3 style="margin:14px 0 4px">🏆 Maiores investidores</h3>${rankingHTML(10)}${FESTA}`);
+    $("f-bchave").onsubmit = async ev => {
+      ev.preventDefault();
+      const codigo = $("i-bchave").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (codigo.length < 6) { $("r-bchave").textContent = "A chave tem pelo menos 6 letras/números (ex.: CEAB12)."; return; }
+      $("b-bentrar").disabled = true; $("b-bentrar").textContent = "Abrindo…";
+      const r = await CE.chave(cfg, { acao: "banco", codigo });
+      if ($("b-bentrar")) { $("b-bentrar").disabled = false; $("b-bentrar").textContent = "🏦 Entrar no banco"; }
+      if (!r.ok) { $("r-bchave").textContent = erroChave(r.erro); return; }
+      guardaChave(codigo); telaBanco(r, codigo, cfg);
+    };
+  }
+  function telaBanco(r, codigo, cfg) {
+    if (!r.aberta) {
+      modal(`<h2>🏦 Bem-vindo, ${e(r.arroba)}!</h2>
+        <div class="saldo-ec"><span>Suas doações viraram</span><b>🪙 ${fmtEC(r.carteira)} EC</b></div>
+        ${AVISO_EC}
+        <label class="check"><input type="checkbox" id="b-rank" checked> Quero aparecer no ranking do banco (seu @ e quantas coins tem no cofre ficam públicos)</label>
+        <p class="erro" id="b-erro"></p>
+        <div class="acoes"><button class="btn verde grande" id="b-abrir">🏦 Abrir minha conta</button></div>${FESTA}`);
+      $("b-abrir").onclick = async () => {
+        $("b-abrir").disabled = true; $("b-abrir").textContent = "Abrindo…";
+        const x = await CE.chave(cfg, { acao: "abrir", codigo, ranking: $("b-rank").checked });
+        if (x.ok) telaBanco(x, codigo, cfg);
+        else { $("b-erro").textContent = erroChave(x.erro); $("b-abrir").disabled = false; $("b-abrir").textContent = "🏦 Abrir minha conta"; }
+      };
+      return;
+    }
+    const ano = r.cofre * (1 + CE.JUROS_ANO), dia = r.cofre * (Math.pow(1 + CE.JUROS_ANO, 1 / 365) - 1);
+    modal(`<h2>🏦 Conta de ${e(r.arroba)}</h2>
+      <div class="saldos">
+        <div class="saldo-ec"><span>👛 Carteira</span><b>🪙 ${fmtEC(r.carteira)}</b><span class="nota">pra gastar ou guardar</span></div>
+        <div class="saldo-ec cofre"><span>🔒 Cofre</span><b>🪙 ${fmtEC(r.cofre)}</b><span class="nota">${r.cofre > 0 ? `+${dia.toFixed(3)} EC por dia · em 1 ano ≈ ${fmtEC(ano)}` : "rende 12% ao ano em coins"}</span></div>
+      </div>
+      <label class="campo" for="bk-qtd">Quantas coins?</label>
+      <input type="number" id="bk-qtd" min="1" step="1" inputmode="numeric" value="${Math.max(1, Math.floor(r.carteira) || Math.floor(r.cofre))}">
+      <div class="acoes"><button class="btn verde" id="bk-dep">⬇️ Guardar no cofre</button><button class="btn branco" id="bk-res">⬆️ Tirar do cofre</button></div>
+      <p class="erro" id="bk-erro"></p>
+      <h3 style="margin:14px 0 6px">🛒 Itens raros</h3>
+      <div class="grade" style="grid-template-columns:1fr 1fr;gap:10px">${Object.entries(CE.ITENS_RAROS).map(([k, it]) => `<div class="cartao item-raro">
+        <div style="font-size:2rem">${it.icone}</div><b>${e(it.nome)}</b><span>🪙 ${it.preco} EC</span>
+        ${(r.itens || []).includes(k) ? `<span class="pill mini verde">✅ É seu</span>` : `<button class="btn" data-comprar="${k}" ${r.carteira < it.preco ? "disabled" : ""}>Comprar</button>`}</div>`).join("")}</div>
+      <p class="nota">Comprou? Use em <a href="#" id="bk-casa">🔑 Minha casa</a>.</p>
+      <label class="check"><input type="checkbox" id="bk-rank" ${r.ranking ? "checked" : ""}> Aparecer no ranking do banco</label>
+      <h3 style="margin:14px 0 4px">🏆 Maiores investidores</h3>${rankingHTML(10)}
+      ${AVISO_EC}${FESTA}`);
+    const acao = async (extra, botao) => {
+      document.querySelectorAll("#m-corpo button").forEach(x => x.disabled = true);
+      if (botao) botao.textContent = "…";
+      const x = await CE.chave(cfg, Object.assign({ codigo }, extra));
+      if (x.ok) { telaBanco(x, codigo, cfg); atualiza(false); return; }
+      telaBanco(x.arroba ? x : r, codigo, cfg);
+      $("bk-erro").textContent = x.erro === "saldo" ? "Saldo insuficiente pra isso 😅" : erroChave(x.erro);
+    };
+    const qtd = () => Math.floor(Number($("bk-qtd").value) || 0);
+    $("bk-dep").onclick = () => acao({ acao: "depositar", qtd: qtd() }, $("bk-dep"));
+    $("bk-res").onclick = () => acao({ acao: "resgatar", qtd: qtd() }, $("bk-res"));
+    document.querySelectorAll("[data-comprar]").forEach(b => b.onclick = () => acao({ acao: "comprar", item: b.dataset.comprar }, b));
+    $("bk-rank").onchange = ev => acao({ acao: "ranking", on: ev.target.checked });
+    $("bk-casa").onclick = ev => { ev.preventDefault(); abrirChave(); };
   }
 
   // ---------------- dentro da lojinha
@@ -228,6 +326,7 @@
   $("b-centro").onclick = () => jogo.voarPara(2.5, 2.5, jogo.zInicial());
   $("b-mini").onclick = () => $("minimapa").classList.toggle("on");
   $("b-chave").onclick = abrirChave;
+  $("b-banco").onclick = abrirBanco;
   $("b-busca").onclick = () => {
     modal(`<h2>🔍 Cadê minha casa?</h2><p>Digite o seu @ e o drone te leva até lá.</p>
       <form id="f-busca"><input type="text" id="i-busca" placeholder="@seu_arroba" autocomplete="off" autocapitalize="none">
@@ -285,6 +384,7 @@
 
   const q = new URLSearchParams(location.search);
   if (q.get("chave") !== null) setTimeout(abrirChave, 400);
+  else if (q.get("banco") !== null) setTimeout(abrirBanco, 400);
   else if (q.get("morador")) setTimeout(() => procura(q.get("morador")), 400);
   else if (q.get("loja")) { const o = jogo.acharLoja(q.get("loja")); if (o) setTimeout(() => entraLoja(o), 400); }
 })();

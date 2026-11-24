@@ -38,11 +38,12 @@
     const precisa = {}; ORDEM_BAIRROS.forEach(b => precisa[b] = 0);
     mor.forEach(m => { precisa[m.rede] += (m.arroba && lojaDe[m.arroba.toLowerCase()]) ? 2 : 1; });
     const blocosPorBairro = {}; ORDEM_BAIRROS.forEach(b => blocosPorBairro[b] = Math.max(1, Math.ceil(precisa[b] / 4)));
-    const total = ORDEM_BAIRROS.reduce((s, b) => s + blocosPorBairro[b], 0) + 3; // + praça + 2 livres
+    const total = ORDEM_BAIRROS.reduce((s, b) => s + blocosPorBairro[b], 0) + 4; // + praça + banco + 2 livres
     let R = 2; while ((2 * R + 1) ** 2 - 1 < total + 2) R++;
     const blocos = new Map(); // "bx,by" -> {tipo, bairro}
     blocos.set("0,0", { tipo: "hospital" });
     blocos.set("-1,0", { tipo: "praca" });
+    blocos.set("-2,2", { tipo: "banco" });   // Banco da Cidade: quadra inteira no canto esquerdo
     const livres = espiral(R).filter(([bx, by]) => !blocos.has(bx + "," + by));
     // primeiro anel: 1 quarteirão por bairro
     const fila = livres.slice();
@@ -87,6 +88,8 @@
       if (b.tipo === "hospital") {
         objs.push({ tipo: "hospital", i: i0, j: j0 });
         for (let t = 0; t < 4; t++) { objs.push(t === 3 ? { tipo: "outdoor", i: i0 + 3, j: j0 + 3 } : { tipo: "arvore", i: i0 + 3, j: j0 + t, s: hash(k + t) }); if (t < 3) objs.push({ tipo: "arvore", i: i0 + t, j: j0 + 3, s: hash(k + "b" + t) }); }
+      } else if (b.tipo === "banco") {
+        objs.push({ tipo: "banco", i: i0, j: j0 });
       } else if (b.tipo === "praca") {
         objs.push({ tipo: "fonte", i: i0 + 1, j: j0 + 1 });
         const pos = [[0, 0], [3, 0], [0, 3], [3, 3], [1, 0], [2, 0], [0, 1], [0, 2], [3, 1], [3, 2], [1, 3], [2, 3]];
@@ -101,7 +104,7 @@
         }
       }
     }
-    objs.forEach(o => { o.prof = o.tipo === "hospital" ? o.i + o.j + 6 : (o.tipo === "fonte" || o.tipo === "casa" || o.tipo === "loja" || o.tipo === "lote") ? o.i + o.j + 2 : o.i + o.j + 1; });
+    objs.forEach(o => { o.prof = (o.tipo === "hospital" || o.tipo === "banco") ? o.i + o.j + 6 : (o.tipo === "fonte" || o.tipo === "casa" || o.tipo === "loja" || o.tipo === "lote") ? o.i + o.j + 2 : o.i + o.j + 1; });
     objs.sort((a, b) => a.prof - b.prof);
     return { R, blocos, objs, ocupado, min: -R * PER, max: R * PER + PER };
   }
@@ -250,7 +253,16 @@
       const c = this.ctx, E = (cx, cy, rx, ry, cor) => { c.fillStyle = cor; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, 7); c.fill(); c.stroke(); };
       c.fillStyle = "rgba(0,0,0,.22)"; c.beginPath(); c.ellipse(x, y, 7, 2.6, 0, 0, 7); c.fill();
       c.save(); c.translate(x, y - pul); c.scale(vira, 1); c.strokeStyle = "#1a1a1a"; c.lineWidth = .9;
-      if (tipo === "papagaio") {
+      if (tipo === "dragao") {
+        const asa = Math.sin(this.t * 10) * 3;
+        c.fillStyle = "#8a4ad8"; c.beginPath(); c.moveTo(-1, -9); c.lineTo(-9, -15 - asa); c.lineTo(-5, -8); c.fill(); c.stroke();
+        c.beginPath(); c.moveTo(-6, -4); c.quadraticCurveTo(-12, -2, -12, -7); c.lineWidth = 2; c.strokeStyle = "#3fb26b"; c.stroke(); c.lineWidth = .9; c.strokeStyle = "#1a1a1a";
+        E(-1, -5, 6.5, 4.2, "#3fb26b"); E(4.5, -10, 4, 3.6, "#3fb26b");
+        c.fillStyle = "#ffd23a"; c.beginPath(); c.moveTo(3, -13); c.lineTo(3.8, -16.5); c.lineTo(5, -13); c.fill();
+        c.fillStyle = "#1a1a1a"; c.fillRect(5.5, -11, 1.3, 1.3);
+        if (Math.sin(this.t * 1.3) > .85) { c.fillStyle = "#ff8a3a"; c.beginPath(); c.moveTo(8.4, -9); c.lineTo(14, -11); c.lineTo(13, -7); c.fill(); }
+        c.fillStyle = "#3fb26b"; c.fillRect(-5, -2, 1.8, 2.5); c.fillRect(2, -2, 1.8, 2.5);
+      } else if (tipo === "papagaio") {
         E(0, -7, 4, 5.5, "#2fb35a"); E(2.5, -12, 3.2, 3.2, "#2fb35a"); c.fillStyle = "#ffd23a"; c.beginPath(); c.moveTo(5, -12.5); c.lineTo(8, -11); c.lineTo(5, -10); c.fill(); c.stroke();
         c.fillStyle = "#e8402a"; c.beginPath(); c.moveTo(-3, -6); c.lineTo(-8, -1); c.lineTo(-2, -3); c.fill(); c.stroke();
         c.fillStyle = "#1a1a1a"; c.fillRect(3, -13, 1.2, 1.2);
@@ -340,6 +352,11 @@
           c.strokeStyle = "#5a3a22"; c.lineWidth = 1.2; c.beginPath(); c.moveTo(top[0], top[1]); c.lineTo(top[0], top[1] - 12); c.stroke();
           c.fillStyle = cor; c.beginPath(); c.moveTo(top[0], top[1] - 12); c.lineTo(top[0] + 9, top[1] - 9.5 + Math.sin(t * 6) * 1.2); c.lineTo(top[0], top[1] - 7); c.fill();
           c.restore(); topoH = h + 6 + th + rh * 1.5 + 12;
+        } else if (tel === "ouro") {
+          this.telhado(i0, j0, w, d, h, rh, "#f2c230", parede);
+          const br = P(oi, oj); c.fillStyle = "#fff6c0";
+          for (let n = 0; n < 3; n++) { const a = t * 2 + n * 2.1, k = (Math.sin(a) + 1) / 2; c.globalAlpha = k; c.beginPath(); c.arc(br[0] - 14 + n * 14, br[1] - h - rh * .7 - n * 3, 1.5 + k * 1.5, 0, 7); c.fill(); }
+          c.globalAlpha = 1;
         } else this.telhado(i0, j0, w, d, h, rh, cor, parede);
         c.restore();
         // carro estacionado (lado direito do lote) e pet (na frente)
@@ -416,6 +433,49 @@
         const rot = this.pilula(cc[0], cc[1] - h - (pronto ? 46 : 26), pronto ? "🏥 HOSPITAL ESPERANÇA" : `🏗️ OBRA DO HOSPITAL ${Math.floor(this.pct * 100)}%`,
           pronto ? "#ffffff" : "#ffd23a", "#1a1a1a", 12);
         box = [cc[0] - 95, cc[1] - h - 70, 190, h + 120];
+      } else if (o.tipo === "banco") {
+        const B = this.dados && this.dados.banco;
+        // praça de pedra na quadra toda
+        this.poly([P(o.i, o.j), P(o.i + 4, o.j), P(o.i + 4, o.j + 4), P(o.i, o.j + 4)], "#e4dccb", "#c9bfa8", 1.5);
+        for (let n = 1; n < 4; n++) {
+          c.strokeStyle = "rgba(0,0,0,.06)"; c.lineWidth = 1;
+          c.beginPath(); c.moveTo(...P(o.i + n, o.j)); c.lineTo(...P(o.i + n, o.j + 4)); c.stroke();
+          c.beginPath(); c.moveTo(...P(o.i, o.j + n)); c.lineTo(...P(o.i + 4, o.j + n)); c.stroke();
+        }
+        const i0 = o.i + .45, j0 = o.j + .35, w = 3.1, d = 2.5, h = 62;
+        const cc = P(o.i + 2, o.j + 1.6);
+        c.fillStyle = "rgba(0,0,0,.18)"; c.beginPath(); c.ellipse(cc[0], cc[1] + 8, 120, 50, 0, 0, 7); c.fill();
+        // escadaria na frente
+        for (let n = 0; n < 3; n++) { c.save(); c.translate(0, 0); this.caixa(i0 + .3, j0 + d + .05 + n * .16, w - .6, .5 - n * .16, 3 * (3 - n), "#f4efe4", "#e2dccd", "#cfc8b8"); c.restore(); }
+        this.caixa(i0, j0, w, d, h, "#f6f1e4", "#fbf7ee", "#e6dfcc");
+        // colunas na fachada e janelas no lado
+        for (let n = 0; n < 7; n++) {
+          const u = .06 + n * .148;
+          this.face(i0, j0, w, d, h, "esq", u, u + .06, 0, .74, "#ffffff");
+          this.face(i0, j0, w, d, h, "esq", u + .06, u + .085, 0, .74, "#d9d2c0");
+        }
+        this.face(i0, j0, w, d, h, "esq", .44, .56, 0, .42, "#5a3a22");
+        this.face(i0, j0, w, d, h, "esq", 0, 1, .74, .8, "#d8cfb8");
+        for (let n = 0; n < 4; n++) this.face(i0, j0, w, d, h, "dir", .1 + n * .22, .22 + n * .22, .3, .62, noite > .4 ? "#ffd98a" : "#9fd2f2");
+        // frontão triangular com a moeda
+        const A = P(i0, j0 + d), Bp = P(i0 + w, j0 + d), up = (p, k) => [p[0], p[1] - k];
+        const meio = [(A[0] + Bp[0]) / 2, (A[1] + Bp[1]) / 2];
+        this.poly([up(A, h), up(Bp, h), up(meio, h + 30)], "#efe7d4", "#c9bfa8", 1.5);
+        this.poly([up(Bp, h), up(P(i0 + w, j0), h), up([meio[0] + (P(i0 + w, j0)[0] - Bp[0]), meio[1] + (P(i0 + w, j0)[1] - Bp[1])], h + 30), up(meio, h + 30)], "#d9cfb6");
+        const mo = up(meio, h + 12);
+        c.fillStyle = "#f2c230"; c.strokeStyle = "#a07a10"; c.lineWidth = 1.5; c.beginPath(); c.arc(mo[0], mo[1], 8, 0, 7); c.fill(); c.stroke();
+        c.fillStyle = "#7a5a08"; c.font = `800 7px "Baloo 2", system-ui, sans-serif`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("EC", mo[0], mo[1] + .5);
+        // moedona girando em cima do prédio
+        const topo = up(P(i0 + w / 2, j0 + d / 2), h + 58 + Math.sin(t * 2) * 4), giro = Math.abs(Math.cos(t * 1.6));
+        c.fillStyle = "rgba(242,194,48,.25)"; c.beginPath(); c.arc(topo[0], topo[1], 26, 0, 7); c.fill();
+        c.fillStyle = giro > .3 ? "#f2c230" : "#d9a520"; c.strokeStyle = "#a07a10"; c.lineWidth = 2;
+        c.beginPath(); c.ellipse(topo[0], topo[1], Math.max(2, 18 * giro), 18, 0, 0, 7); c.fill(); c.stroke();
+        if (giro > .45) { c.fillStyle = "#7a5a08"; c.font = `800 ${12 * giro}px "Baloo 2", system-ui, sans-serif`; c.fillText("EC", topo[0], topo[1] + 1); }
+        for (let n = 0; n < 4; n++) { const a = t * 1.2 + n * 1.6; c.fillStyle = "#fff6c0"; c.beginPath(); c.arc(topo[0] + Math.cos(a) * 30, topo[1] + Math.sin(a) * 12, 1.8, 0, 7); c.fill(); }
+        const rot = this.pilula(topo[0], topo[1] - 28, "🏦 BANCO DA CIDADE", "#ffd23a", "#1a1a1a", 12);
+        if (B && B.contas && this.z > .6) this.pilula(topo[0], rot[1] - 4, `${B.contas} conta${B.contas === 1 ? "" : "s"} · ${B.total_investido} EC no cofre`, "#fff", "#1a1a1a", 8);
+        const pe = P(o.i + 2, o.j + 4);
+        box = [Math.min(rot[0], cc[0] - 110), rot[1] - 20, Math.max(rot[2], 220), pe[1] - rot[1] + 20];
       } else if (o.tipo === "outdoor") {
         const cc = P(o.i + .5, o.j + .5), msgs = (this.dados && this.dados.outdoor) || [];
         const W = 92, H = 44, y0 = cc[1] - 26;
@@ -549,8 +609,8 @@
       c.fillStyle = "#4a4e58";
       for (let r = L.min; r <= L.max; r += PER) { const [x] = mp(r, 0); c.fillRect(x, 0, k, S); const [, y] = mp(0, r); c.fillRect(0, y, S, k); }
       for (const o of L.objs) {
-        const cor = o.tipo === "casa" ? o.cor : o.tipo === "loja" ? "#ffd23a" : o.tipo === "hospital" ? "#fff" : o.tipo === "estatua" ? "#ffd23a" : null;
-        if (!cor) continue; const [x, y] = mp(o.i, o.j); const sz = o.tipo === "hospital" ? 3 * k : (o.tipo === "casa" || o.tipo === "loja") ? 2 * k : k;
+        const cor = o.tipo === "casa" ? o.cor : o.tipo === "loja" ? "#ffd23a" : o.tipo === "hospital" ? "#fff" : o.tipo === "banco" ? "#f2c230" : o.tipo === "estatua" ? "#ffd23a" : null;
+        if (!cor) continue; const [x, y] = mp(o.i, o.j); const sz = o.tipo === "hospital" ? 3 * k : o.tipo === "banco" ? 4 * k : (o.tipo === "casa" || o.tipo === "loja") ? 2 * k : k;
         c.fillStyle = cor; c.fillRect(x, y, sz, sz);
       }
       const [ci, cj] = this.mundoParaTile(this.cx, this.cy), [x, y] = mp(ci, cj);
@@ -622,6 +682,7 @@
     acharLoja(id) { return this.lay.objs.find(o => o.tipo === "loja" && String(o.l.id) === String(id)) || null; }
     hospital() { return this.lay.objs.find(o => o.tipo === "hospital"); }
     outdoor() { return this.lay.objs.find(o => o.tipo === "outdoor"); }
+    banco() { return this.lay.objs.find(o => o.tipo === "banco"); }
   }
 
   // avatar em SVG (pro balcão da loja e cards)

@@ -44,6 +44,10 @@
         <span class="pill mini branco">${e(CE.dataBR(p.data))}</span><h3 style="margin:8px 0 4px">${e(p.titulo)}</h3><p style="margin:0">${e(p.texto)}</p>
         ${CE.linkSeguro(p.video) ? `<p><a class="pill azul" href="${e(CE.linkSeguro(p.video))}" target="_blank" rel="noopener">▶ Ver vídeo</a></p>` : ""}</div>`).join("")
       : `<div class="cartao">A obra começa já já…</div>`;
+    // ranking do banco
+    const rk = (d.banco && d.banco.ranking) || [];
+    $("ranking-banco").innerHTML = rk.length ? `<ol class="ranking">${rk.slice(0, 10).map((x, k) => `<li><span>${["🥇", "🥈", "🥉"][k] || (k + 1) + "º"}</span><b>${e(x.arroba)}</b><span class="ec">🪙 ${x.investido} EC</span></li>`).join("")}</ol>`
+      : `<div class="cartao centro"><p>O cofre está vazio… o 1º lugar do ranking pode ser seu!</p></div>`;
     // outdoor
     const outs = d.outdoor || [];
     $("outdoor").innerHTML = outs.length ? outs.map(x => `<div class="cartao"><b style="color:var(--vermelho)">${e(x.arroba)}</b><p style="margin:4px 0 0;font-size:1.15rem">“${e(x.frase)}”</p></div>`).join("")

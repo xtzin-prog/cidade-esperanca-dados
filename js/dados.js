@@ -24,8 +24,12 @@
   // vantagens de morador (decoração com a chave da casa)
   const NIVEIS_CASA = { 1: { nome: "Casinha", icone: "🏠", min: 1 }, 2: { nome: "Casa", icone: "🏡", min: 10 },
     3: { nome: "Sobrado", icone: "🏘️", min: 30 }, 4: { nome: "Mansão", icone: "🏰", min: 100 } };
-  const TELHADOS = { classico: "🔺 Clássico", laje: "⬜ Laje com caixa d'água", castelo: "🏰 Torre de castelo" };
-  const PETS = { "": "Nenhum", cachorro: "🐶 Cachorro", gato: "🐱 Gato", coelho: "🐰 Coelho", papagaio: "🦜 Papagaio" };
+  const TELHADOS = { classico: "🔺 Clássico", laje: "⬜ Laje com caixa d'água", castelo: "🏰 Torre de castelo", ouro: "👑 Telhado de ouro" };
+  const PETS = { "": "Nenhum", cachorro: "🐶 Cachorro", gato: "🐱 Gato", coelho: "🐰 Coelho", papagaio: "🦜 Papagaio", dragao: "🐉 Dragão" };
+  // itens raros do Banco da Cidade (comprados com Esperança Coins, a moeda do jogo)
+  const ITENS_RAROS = { ouro: { nome: "Telhado de ouro", icone: "👑", preco: 60, campo: "telhado" },
+    dragao: { nome: "Pet dragão", icone: "🐉", preco: 30, campo: "pet" } };
+  const JUROS_ANO = 0.12;
   const CARROS = { "": "Nenhum", carro: "🚗 Carro", esportivo: "🏎️ Esportivo", moto: "🏍️ Moto" };
   const MIN_OUTDOOR = 20;
 
@@ -44,6 +48,8 @@
       if (!TELHADOS[m.telhado]) m.telhado = "classico"; if (!(m.pet in PETS)) m.pet = ""; if (!(m.carro in CARROS)) m.carro = "";
       m.placa = String(m.placa || "").slice(0, 20);
     });
+    v.banco = Object.assign({ contas: 0, total_investido: 0, ranking: [] }, v.banco || {});
+    v.banco.ranking = (v.banco.ranking || []).filter(x => x && x.arroba).map(x => ({ arroba: String(x.arroba), investido: Math.max(0, Math.floor(Number(x.investido) || 0)) }));
     v.outdoor = (v.outdoor || []).filter(o => o && o.frase).map(o => ({ arroba: String(o.arroba || ""), frase: String(o.frase).slice(0, 60) }));
     v.lojinhas = (v.lojinhas || []).map((l, i) => Object.assign({ id: "l" + i, dono: "", nome: "Lojinha", vende: "", contato: "", fotos: [],
       cor: "vermelho", tipo: "outro", produtos: [] }, l));
@@ -69,6 +75,7 @@
     d.lojinhas = (fixo.lojinhas || []).concat(vivo.lojinhas || []);
     d.estatuas = (fixo.estatuas || []).concat(vivo.estatuas || []);
     d.outdoor = (fixo.outdoor || []).concat(vivo.outdoor || []);
+    d.banco = vivo.banco || fixo.banco || null;
     d.arrecadado = (Number(fixo.arrecadado) || 0) + (Number(vivo.arrecadado) || 0);
     d.doacoes = (Number(fixo.doacoes) || 0) + (Number(vivo.doacoes) || 0);
     return d;
@@ -157,5 +164,5 @@
     return d && m ? `${d}/${m}/${a}` : s;
   }
 
-  window.CE = { carregar, config, enviarDoacao, chave, NIVEIS_CASA, TELHADOS, PETS, CARROS, MIN_OUTDOOR, dia, reais, esc, linkSeguro, dataBR, BAIRROS, CORES_CASA, TIPOS_LOJA, CONQUISTAS };
+  window.CE = { carregar, config, enviarDoacao, chave, ITENS_RAROS, JUROS_ANO, NIVEIS_CASA, TELHADOS, PETS, CARROS, MIN_OUTDOOR, dia, reais, esc, linkSeguro, dataBR, BAIRROS, CORES_CASA, TIPOS_LOJA, CONQUISTAS };
 })();

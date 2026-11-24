@@ -26,6 +26,13 @@
  *    até R$ 9 = Casinha · R$ 10 = Casa · R$ 30 = Sobrado · R$ 100 = Mansão.
  *  - OUTDOOR: quem doou R$ 20 ou mais (somando) escreve uma frase. Ela só aparece
  *    depois que VOCÊ marcar a coluna "Outdoor ✅". Se a pessoa mudar a frase, o ✅ desmarca.
+ *
+ * Banco da Cidade (versão 3) — aba "Banco", criada sozinha:
+ *  - Cada R$ 1 doado (com ✅) = 1 Esperança Coin (EC). É moeda SÓ DO JOGO: não vale dinheiro,
+ *    não se saca e não é investimento de verdade.
+ *  - O morador abre a conta com a chave da casa, guarda EC no cofre (rende 12% ao ano EM COINS),
+ *    compra itens raros (telhado de ouro, pet dragão) e aparece no ranking (se quiser).
+ *  - Nenhum dado pessoal (telefone, e-mail, PIX) é pedido nem guardado.
  */
 
 const ABA = "Doações";
@@ -37,12 +44,20 @@ const C = { ok: 0, data: 1, cod: 2, item: 3, valor: 4, arroba: 5, rede: 6, prof:
   lcont: 13, fotos: 14, frase: 15, obs: 16, telhado: 17, pet: 18, carro: 19, placa: 20, outdoor: 21, outok: 22, editado: 23 };
 const OPCOES = {
   cor: ["vermelho", "azul", "amarelo", "verde", "roxo", "rosa"],
-  telhado: ["classico", "laje", "castelo"],
-  pet: ["", "cachorro", "gato", "coelho", "papagaio"],
+  telhado: ["classico", "laje", "castelo", "ouro"],
+  pet: ["", "cachorro", "gato", "coelho", "papagaio", "dragao"],
   carro: ["", "carro", "esportivo", "moto"],
 };
 const NIVEIS = [[100, 4], [30, 3], [10, 2], [0, 1]];   // soma doada -> nível da casa (1 Casinha, 2 Casa, 3 Sobrado, 4 Mansão)
 const MIN_OUTDOOR = 20;
+// ---- Banco da Cidade (moeda do jogo)
+const ABA_BANCO = "Banco";
+const COLS_BANCO = ["@ (minúsculo)", "@", "Conta aberta em", "Cofre base (EC)", "Cofre desde", "Depositado (EC)", "Resgatado (EC)",
+  "Gasto (EC)", "Itens", "No ranking"];
+const B = { k: 0, arroba: 1, aberta: 2, base: 3, desde: 4, dep: 5, resg: 6, gasto: 7, itens: 8, rank: 9 };
+const JUROS_ANO = 0.12;
+const ITENS = { ouro: { nome: "Telhado de ouro", preco: 60 }, dragao: { nome: "Pet dragão", preco: 30 } };
+const ACOES_BANCO = ["banco", "abrir", "depositar", "resgatar", "comprar", "ranking"];
 
 function configurar() {
   const ss = SpreadsheetApp.getActive();
@@ -56,6 +71,7 @@ function configurar() {
   sh.getRange(1, C.editado + 1, sh.getMaxRows(), 1).setNumberFormat("dd/MM HH:mm");
   const vazia = ss.getSheetByName("Página1") || ss.getSheetByName("Sheet1");
   if (vazia && vazia.getName() !== ABA && vazia.getLastRow() === 0) ss.deleteSheet(vazia);
+  abaBanco_();
   CacheService.getScriptCache().remove("cidade");
 }
 
@@ -67,7 +83,7 @@ function doPost(e) {
     const d = JSON.parse((e && e.postData && e.postData.contents) || "{}");
     if (d.hp) return json_({ ok: true });                       // robô (campo escondido preenchido)
     const sh = SpreadsheetApp.getActive().getSheetByName(ABA);
-    if (d.acao === "entrar" || d.acao === "salvar") return chave_(sh, d);
+    if (d.acao === "entrar" || d.acao === "salvar" || ACOES_BANCO.indexOf(d.acao) >= 0) return chave_(sh, d);
     const valor = Math.max(0, Math.min(100000, Number(d.valor) || 0));
     if (!valor) return json_({ ok: false });
     sh.appendRow([false, new Date(), t_(d.codigo, 12), t_(d.item, 30), valor, t_(d.arroba, 40), t_(d.rede, 12), t_(d.profissao, 20),
@@ -119,6 +135,7 @@ function doGet() {
     });
   });
   out.arrecadado = Math.round(out.arrecadado * 100) / 100;
+  out.banco = bancoPublico_();
   const txt = JSON.stringify(out);
   cache.put("cidade", txt, 60);
   return ContentService.createTextOutput(txt).setMimeType(ContentService.MimeType.JSON);
@@ -163,6 +180,8 @@ function chave_(sh, d) {
   const r = linhas[n];
   if (r[C.ok] !== true) return json_({ ok: false, erro: "pendente" });
   const g = grupos_(linhas).find(x => x.linhas.some(y => y.n === n));
+  if (ACOES_BANCO.indexOf(d.acao) >= 0) return banco_(g, d);
+  const itens = g.arroba ? itensDe_(g.arroba) : [];
   if (d.acao === "salvar") {
     const novo = {
       cor: ok_("cor", d.cor) || limpa_(r[C.cor]) || "vermelho",
@@ -171,6 +190,8 @@ function chave_(sh, d) {
       placa: t_(String(d.placa || "").replace(/\s+/g, " ").trim(), 20),
       outdoor: g.total >= MIN_OUTDOOR ? t_(String(d.outdoor || "").replace(/\s+/g, " ").trim(), 60) : "",
     };
+    if (novo.telhado === "ouro" && itens.indexOf("ouro") < 0) novo.telhado = "classico";   // item raro: só quem comprou
+    if (novo.pet === "dragao" && itens.indexOf("dragao") < 0) novo.pet = "";
     const linha = n + 2;
     const mudouOutdoor = limpa_(r[C.outdoor]) !== limpa_(novo.outdoor);
     sh.getRange(linha, C.cor + 1).setValue(novo.cor);
@@ -189,12 +210,95 @@ function chave_(sh, d) {
     pode_outdoor: total >= MIN_OUTDOOR, falta_outdoor: Math.max(0, Math.ceil(MIN_OUTDOOR - total)),
     cor: limpa_(rv[C.cor]) || "vermelho", telhado: ok_("telhado", rv[C.telhado]) || "classico", pet: ok_("pet", rv[C.pet]),
     carro: ok_("carro", rv[C.carro]), placa: limpa_(rv[C.placa]), outdoor: limpa_(r[C.outdoor]) || limpa_(rv[C.outdoor]),
-    outdoor_aprovado: (r[C.outdoor] ? r[C.outok] : rv[C.outok]) === true });
+    outdoor_aprovado: (r[C.outdoor] ? r[C.outok] : rv[C.outok]) === true, itens });
 }
 
 // quando você marca/desmarca o ✅, a cidade atualiza mais rápido
 function onEdit() {
   CacheService.getScriptCache().remove("cidade");
+}
+
+// ---------------------------------------------------------------- Banco da Cidade (moeda do jogo)
+function abaBanco_() {
+  const ss = SpreadsheetApp.getActive();
+  let sh = ss.getSheetByName(ABA_BANCO);
+  if (!sh) {
+    sh = ss.insertSheet(ABA_BANCO);
+    sh.getRange(1, 1, 1, COLS_BANCO.length).setValues([COLS_BANCO]).setFontWeight("bold").setBackground("#ffd23a");
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function r2_(v) { return Math.round((Number(v) || 0) * 100) / 100; }
+function cofreAgora_(r) {
+  const base = Number(r[B.base]) || 0, desde = r[B.desde] instanceof Date ? r[B.desde].getTime() : Date.now();
+  const dias = Math.max(0, (Date.now() - desde) / 86400000);
+  return base * Math.pow(1 + JUROS_ANO, dias / 365);
+}
+function contaDe_(arroba) {
+  const sh = abaBanco_(), k = String(arroba || "").toLowerCase();
+  const vals = sh.getDataRange().getValues();
+  for (let n = 1; n < vals.length; n++) if (String(vals[n][B.k]) === k) return { sh, linha: n + 1, r: vals[n] };
+  return { sh, linha: 0, r: null };
+}
+function itensDe_(arroba) {
+  const c = contaDe_(arroba);
+  return c.r ? String(c.r[B.itens] || "").split(",").map(x => x.trim()).filter(Boolean) : [];
+}
+function estadoConta_(g, c) {
+  const coins = Math.floor(g.total);
+  const base = { ok: true, arroba: g.arroba, coins_doados: coins, juros_ano: JUROS_ANO, loja: ITENS };
+  if (!c.r) return Object.assign(base, { aberta: false, carteira: coins, cofre: 0, itens: [], ranking: true });
+  const r = c.r;
+  return Object.assign(base, { aberta: true,
+    carteira: r2_(coins - (Number(r[B.dep]) || 0) + (Number(r[B.resg]) || 0) - (Number(r[B.gasto]) || 0)),
+    cofre: Math.floor(cofreAgora_(r) * 10000) / 10000, itens: String(r[B.itens] || "").split(",").map(x => x.trim()).filter(Boolean),
+    ranking: r[B.rank] === true });
+}
+function banco_(g, d) {
+  if (!g.arroba) return json_({ ok: false, erro: "sem_arroba" });
+  let c = contaDe_(g.arroba);
+  const salva = vals => { c.sh.getRange(c.linha, 1, 1, vals.length).setValues([vals]); c = contaDe_(g.arroba); CacheService.getScriptCache().remove("cidade"); };
+  if (d.acao === "abrir") {
+    if (!c.r) {
+      c.sh.appendRow([g.arroba.toLowerCase(), "'" + g.arroba, new Date(), 0, new Date(), 0, 0, 0, "", d.ranking !== false]);
+      c = contaDe_(g.arroba); CacheService.getScriptCache().remove("cidade");
+    }
+    return json_(estadoConta_(g, c));
+  }
+  if (d.acao === "banco") return json_(estadoConta_(g, c));
+  if (!c.r) return json_(Object.assign(estadoConta_(g, c), { ok: false, erro: "sem_conta" }));
+  const est = estadoConta_(g, c), r = c.r.slice();
+  const qtd = Math.floor(Number(d.qtd) || 0);
+  if (d.acao === "depositar") {
+    if (qtd < 1 || qtd > Math.floor(est.carteira)) return json_(Object.assign(est, { ok: false, erro: "saldo" }));
+    r[B.base] = cofreAgora_(r) + qtd; r[B.desde] = new Date(); r[B.dep] = (Number(r[B.dep]) || 0) + qtd; salva(r);
+  } else if (d.acao === "resgatar") {
+    const agora = cofreAgora_(r);
+    if (qtd < 1 || qtd > Math.floor(agora)) return json_(Object.assign(est, { ok: false, erro: "saldo" }));
+    r[B.base] = agora - qtd; r[B.desde] = new Date(); r[B.resg] = (Number(r[B.resg]) || 0) + qtd; salva(r);
+  } else if (d.acao === "comprar") {
+    const it = ITENS[d.item];
+    if (!it || est.itens.indexOf(d.item) >= 0) return json_(Object.assign(est, { ok: false, erro: "item" }));
+    if (it.preco > est.carteira) return json_(Object.assign(est, { ok: false, erro: "saldo" }));
+    r[B.gasto] = (Number(r[B.gasto]) || 0) + it.preco; r[B.itens] = est.itens.concat(d.item).join(","); salva(r);
+  } else if (d.acao === "ranking") {
+    r[B.rank] = !!d.on; salva(r);
+  }
+  return json_(estadoConta_(g, c));
+}
+// ranking público: só quem escolheu aparecer (o @ e quanto tem guardado no cofre, em coins)
+function bancoPublico_() {
+  const sh = SpreadsheetApp.getActive().getSheetByName(ABA_BANCO);
+  const vals = sh ? sh.getDataRange().getValues().slice(1).filter(r => r[B.k]) : [];
+  let total = 0;
+  const lista = [];
+  vals.forEach(r => {
+    const v = cofreAgora_(r); total += v;
+    if (r[B.rank] === true && v >= 1) lista.push({ arroba: limpa_(r[B.arroba]), investido: Math.floor(v) });
+  });
+  lista.sort((a, b) => b.investido - a.investido);
+  return { contas: vals.length, total_investido: Math.floor(total), ranking: lista.slice(0, 50) };
 }
 
 // ---------------------------------------------------------------- utilidades
