@@ -21,6 +21,13 @@
     fundador: "🏅 Morador fundador", primeiro_lojista: "🛍️ Primeiro lojista", estatua: "🗽 Estátua da praça",
     chamou_amigo: "🤝 Chamou um amigo",
   };
+  // vantagens de morador (decoração com a chave da casa)
+  const NIVEIS_CASA = { 1: { nome: "Casinha", icone: "🏠", min: 1 }, 2: { nome: "Casa", icone: "🏡", min: 10 },
+    3: { nome: "Sobrado", icone: "🏘️", min: 30 }, 4: { nome: "Mansão", icone: "🏰", min: 100 } };
+  const TELHADOS = { classico: "🔺 Clássico", laje: "⬜ Laje com caixa d'água", castelo: "🏰 Torre de castelo" };
+  const PETS = { "": "Nenhum", cachorro: "🐶 Cachorro", gato: "🐱 Gato", coelho: "🐰 Coelho", papagaio: "🦜 Papagaio" };
+  const CARROS = { "": "Nenhum", carro: "🚗 Carro", esportivo: "🏎️ Esportivo", moto: "🏍️ Moto" };
+  const MIN_OUTDOOR = 20;
 
   function vazio() {
     return { versao: 0, lancamento: new Date().toISOString().slice(0, 10), meta: 9750, arrecadado: 0, doacoes: 0, aviso: "",
@@ -30,8 +37,14 @@
   function normaliza(d) {
     const v = Object.assign(vazio(), d || {});
     v.moradores = (v.moradores || []).map((m, i) => Object.assign({ id: "m" + i, arroba: "", rede: "outra", profissao: "", cor_casa: "vermelho",
-      nivel: "morador", chegou_em: v.lancamento, conquistas: [] }, m));
-    v.moradores.forEach(m => { if (!BAIRROS[m.rede]) m.rede = "outra"; if (!CORES_CASA[m.cor_casa]) m.cor_casa = "vermelho"; });
+      nivel: "morador", casa_nivel: 1, telhado: "classico", pet: "", carro: "", placa: "", chegou_em: v.lancamento, conquistas: [] }, m));
+    v.moradores.forEach(m => {
+      if (!BAIRROS[m.rede]) m.rede = "outra"; if (!CORES_CASA[m.cor_casa]) m.cor_casa = "vermelho";
+      m.casa_nivel = Math.max(1, Math.min(4, Math.floor(Number(m.casa_nivel) || 1)));
+      if (!TELHADOS[m.telhado]) m.telhado = "classico"; if (!(m.pet in PETS)) m.pet = ""; if (!(m.carro in CARROS)) m.carro = "";
+      m.placa = String(m.placa || "").slice(0, 20);
+    });
+    v.outdoor = (v.outdoor || []).filter(o => o && o.frase).map(o => ({ arroba: String(o.arroba || ""), frase: String(o.frase).slice(0, 60) }));
     v.lojinhas = (v.lojinhas || []).map((l, i) => Object.assign({ id: "l" + i, dono: "", nome: "Lojinha", vende: "", contato: "", fotos: [],
       cor: "vermelho", tipo: "outro", produtos: [] }, l));
     v.estatuas = v.estatuas || [];
@@ -55,6 +68,7 @@
     d.moradores = (fixo.moradores || []).concat((vivo.moradores || []).filter(m => !m.arroba || !vistos.has(m.arroba.toLowerCase())));
     d.lojinhas = (fixo.lojinhas || []).concat(vivo.lojinhas || []);
     d.estatuas = (fixo.estatuas || []).concat(vivo.estatuas || []);
+    d.outdoor = (fixo.outdoor || []).concat(vivo.outdoor || []);
     d.arrecadado = (Number(fixo.arrecadado) || 0) + (Number(vivo.arrecadado) || 0);
     d.doacoes = (Number(fixo.doacoes) || 0) + (Number(vivo.doacoes) || 0);
     return d;
@@ -97,6 +111,15 @@
     return normaliza(null);
   }
 
+  // chave da casa: fala com a planilha e LÊ a resposta (entrar / salvar decoração)
+  async function chave(cfg, dados) {
+    if (!cfg.planilha_url) return { ok: false, erro: "off" };
+    try {
+      const r = await fetch(cfg.planilha_url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(dados) });
+      return await r.json();
+    } catch (e) { return { ok: false, erro: "rede" }; }
+  }
+
   // manda a doação pra planilha (sem esperar resposta: o Google não deixa ler)
   async function enviarDoacao(cfg, dados) {
     if (!cfg.planilha_url) return false;
@@ -134,5 +157,5 @@
     return d && m ? `${d}/${m}/${a}` : s;
   }
 
-  window.CE = { carregar, config, enviarDoacao, dia, reais, esc, linkSeguro, dataBR, BAIRROS, CORES_CASA, TIPOS_LOJA, CONQUISTAS };
+  window.CE = { carregar, config, enviarDoacao, chave, NIVEIS_CASA, TELHADOS, PETS, CARROS, MIN_OUTDOOR, dia, reais, esc, linkSeguro, dataBR, BAIRROS, CORES_CASA, TIPOS_LOJA, CONQUISTAS };
 })();

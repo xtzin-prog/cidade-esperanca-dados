@@ -44,6 +44,10 @@
         <span class="pill mini branco">${e(CE.dataBR(p.data))}</span><h3 style="margin:8px 0 4px">${e(p.titulo)}</h3><p style="margin:0">${e(p.texto)}</p>
         ${CE.linkSeguro(p.video) ? `<p><a class="pill azul" href="${e(CE.linkSeguro(p.video))}" target="_blank" rel="noopener">▶ Ver vídeo</a></p>` : ""}</div>`).join("")
       : `<div class="cartao">A obra começa já já…</div>`;
+    // outdoor
+    const outs = d.outdoor || [];
+    $("outdoor").innerHTML = outs.length ? outs.map(x => `<div class="cartao"><b style="color:var(--vermelho)">${e(x.arroba)}</b><p style="margin:4px 0 0;font-size:1.15rem">“${e(x.frase)}”</p></div>`).join("")
+      : `<div class="cartao centro"><p>O outdoor da cidade está esperando o primeiro recado… Doando ${CE.reais(CE.MIN_OUTDOOR)} ou mais, ele pode ser seu!</p></div>`;
     // rodapé
     $("perfil").textContent = cfg.perfil || "@cidadeep";
     $("redes").innerHTML = [cfg.tiktok && `<a class="pill" href="${e(CE.linkSeguro(cfg.tiktok))}" target="_blank" rel="noopener">🎵 TikTok</a>`,
@@ -66,7 +70,7 @@
     estatua: { nome: "Estátua na praça", icone: "🗽", min: 100, valores: [100, 150, 200] },
   };
   const est = { passo: 1, item: "morador", valor: 20, arroba: "", rede: "instagram", profissao: "", cor: "vermelho",
-    loja_nome: "", loja_tipo: "doces", loja_vende: "", loja_contato: "", produtos: "", frase: "", ok: false };
+    loja_nome: "", loja_tipo: "doces", loja_vende: "", loja_contato: "", produtos: "", frase: "", outdoor: "", ok: false };
   const modalAbre = html => { $("m-corpo").innerHTML = html; $("modal").classList.add("on"); $("modal").querySelector(".modal").scrollTop = 0; };
   const fecha = () => $("modal").classList.remove("on");
   $("m-fechar").onclick = fecha;
@@ -113,7 +117,7 @@
         <label class="campo" for="f-rede">De qual rede? (define o seu bairro)</label>
         <select id="f-rede">${Object.entries(CE.BAIRROS).map(([k, b]) => `<option value="${k}" ${est.rede === k ? "selected" : ""}>${b.icone} ${b.nome.replace("Bairro ", "")}</option>`).join("")}</select>
         <label class="campo" for="f-prof">Profissão do seu morador</label>
-        <input type="text" id="f-prof" maxlength="20" placeholder="Ex.: Padeiro, DJ, Médica, Gamer" value="${e(est.profissao)}">
+        <input type="text" id="f-prof" maxlength="20" placeholder="Padeiro, DJ, Médica, Gamer…" value="${e(est.profissao)}">
         <label class="campo">Cor da sua casa</label>
         <div class="cores">${Object.entries(CE.CORES_CASA).map(([k, c]) => `<button type="button" data-cor="${k}" class="${est.cor === k ? "sel" : ""}" style="background:${c}" aria-label="${k}"></button>`).join("")}</div>
         ${loja ? `<h3 style="margin:18px 0 0">🛍️ Sua lojinha</h3>
@@ -124,6 +128,9 @@
           <label class="campo" for="f-lcont">Contato da loja (Instagram, WhatsApp ou site)</label><input type="text" id="f-lcont" maxlength="80" value="${e(est.loja_contato)}">
           <p class="nota">As fotos dos produtos você manda no WhatsApp junto com o comprovante.</p>` : ""}
         ${estatua ? `<label class="campo" for="f-frase">🗽 Frase da sua estátua</label><input type="text" id="f-frase" maxlength="50" value="${e(est.frase)}">` : ""}
+        ${est.valor >= CE.MIN_OUTDOOR ? `<label class="campo" for="f-out">📣 Recado no outdoor da cidade (opcional)</label>
+          <input type="text" id="f-out" maxlength="60" placeholder="Um recado pra cidade inteira" value="${e(est.outdoor)}">
+          <p class="nota">Aparece no outdoor e no vídeo depois de aprovado.</p>` : ""}
         <input type="text" id="f-hp" tabindex="-1" autocomplete="off" class="so-leitores" aria-hidden="true">
         <label class="check"><input type="checkbox" id="f-ok" ${est.ok ? "checked" : ""}> Autorizo que meu @${loja ? " e minha lojinha" : ""} apareçam na cidade e nos vídeos. Li as regras (sem sorteio; lojinha só com produto legal).</label>
         <p class="erro" id="f-erro"></p>
@@ -131,7 +138,8 @@
       document.querySelectorAll("[data-cor]").forEach(b => b.onclick = () => { est.cor = b.dataset.cor; document.querySelectorAll("[data-cor]").forEach(x => x.classList.toggle("sel", x === b)); });
       const pega = () => {
         let a = $("f-arroba").value.trim().replace(/\s+/g, ""); if (a && !a.startsWith("@")) a = "@" + a; est.arroba = a;
-        est.rede = $("f-rede").value; est.profissao = $("f-prof").value.trim(); est.ok = $("f-ok").checked;
+        est.rede = $("f-rede").value; est.profissao = $("f-prof").value.trim().replace(/^ex(emplo)?\s*[.:]\s*/i, ""); est.ok = $("f-ok").checked;
+        if ($("f-out")) est.outdoor = $("f-out").value.trim();
         if (loja) { est.loja_nome = $("f-lnome").value.trim(); est.loja_tipo = $("f-ltipo").value; est.loja_vende = $("f-lvende").value.trim(); est.produtos = $("f-lprod").value.trim(); est.loja_contato = $("f-lcont").value.trim(); }
         if (estatua) est.frase = $("f-frase").value.trim();
       };
@@ -141,15 +149,15 @@
         if (!est.ok) { $("f-erro").textContent = "Marque a autorização pra continuar."; return; }
         if (loja && !est.loja_nome) { $("f-erro").textContent = "Dê um nome pra sua lojinha 🙂"; return; }
         // código curto que aparece no PIX e na planilha (pra achar a doação no extrato)
-        const chave = JSON.stringify([est.valor, est.arroba, est.rede, est.profissao, est.cor, est.loja_nome, est.produtos, est.frase]);
+        const chave = JSON.stringify([est.valor, est.arroba, est.rede, est.profissao, est.cor, est.loja_nome, est.produtos, est.frase, est.outdoor]);
         if (est.enviado !== chave) {
           const L = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-          est.codigo = "CE" + Array.from({ length: 4 }, () => L[Math.floor(Math.random() * L.length)]).join("");
+          est.codigo = "CE" + Array.from({ length: 6 }, () => L[Math.floor(Math.random() * L.length)]).join("");
           $("f-seguir").disabled = true; $("f-seguir").textContent = "Guardando…";
           await CE.enviarDoacao(cfg, { codigo: est.codigo, item: ITENS[est.item].nome, valor: est.valor, arroba: est.arroba, rede: est.rede,
             profissao: est.profissao, cor: est.cor, loja_nome: loja ? est.loja_nome : "", loja_tipo: loja ? est.loja_tipo : "",
             loja_vende: loja ? est.loja_vende : "", produtos: loja ? est.produtos : "", loja_contato: loja ? est.loja_contato : "",
-            frase: estatua ? est.frase : "", hp: ($("f-hp") || {}).value || "" });
+            frase: estatua ? est.frase : "", outdoor: est.valor >= CE.MIN_OUTDOOR ? est.outdoor : "", hp: ($("f-hp") || {}).value || "" });
           est.enviado = chave;
         }
         est.passo = 3; render();
@@ -160,7 +168,7 @@
       const codigo = temPix ? PIX.gerar({ chave: cfg.pix_chave, nome: cfg.pix_nome, cidade: cfg.pix_cidade, valor: est.valor,
         txid: est.codigo || "CIDADE", descricao: "Cidade Esperanca " + (est.codigo || "") }) : "";
       modalAbre(`${passos(3)}<h2>💚 Pague ${CE.reais(est.valor)} no PIX</h2>
-        ${est.codigo ? `<p>Seu código: <span class="pill mini">${e(est.codigo)}</span> (ele vai junto no PIX)</p>` : ""}
+        ${est.codigo ? `<p>🔑 Sua chave: <span class="pill mini">${e(est.codigo)}</span> (ela vai junto no PIX). <b>Guarde!</b> Com ela você decora sua casa.</p>` : ""}
         ${temPix ? `<p>Abra o app do seu banco e escaneie o QR Code ou use o <b>PIX copia e cola</b>:</p>
           <div class="qr" id="qr"></div><div class="copia" id="copia">${e(codigo)}</div>
           <div class="acoes"><button class="btn" id="b-copia">📋 Copiar código PIX</button></div>`
@@ -189,11 +197,16 @@
       const busca = est.arroba ? `cidade.html?morador=${encodeURIComponent(est.arroba)}` : "cidade.html";
       modalAbre(`<div class="centro"><div style="font-size:4rem">🏗️</div><h2 style="margin:0 0 8px">Obrigado! Sua casa está a caminho 💛</h2>
         <p>Assim que o PIX for conferido, ela aparece na cidade${est.arroba ? ` com o <b>${e(est.arroba)}</b>` : ""}. Normalmente no mesmo dia.</p>
+        ${est.codigo ? `<div class="cartao" style="margin:12px 0;background:var(--creme)"><b>🔑 A chave da sua casa:</b>
+          <div style="font-size:1.8rem;font-weight:800;letter-spacing:2px;margin:4px 0" id="s-chave">${e(est.codigo)}</div>
+          <button class="btn branco" id="b-copchave">📋 Copiar chave</button>
+          <p class="nota">Tira um print! Quando a casa aparecer, toque em <b>🔑 Minha casa</b> na cidade e decore: cor, telhado, pet, carro, placa${est.valor >= CE.MIN_OUTDOOR ? " e o recado do outdoor" : ""}.</p></div>` : ""}
         <p>Depois é só tocar em <b>🔍 Cadê minha casa?</b> e o drone te leva até lá. E fica de olho no próximo vídeo 👀</p>
         <div class="acoes" style="justify-content:center">
           <a class="btn verde" href="${busca}">🏙️ Ver a cidade</a>
           <button class="btn branco" id="b-share">📤 Chamar um amigo</button></div>
         ${num ? `<p class="nota">Deu algum problema? <a href="https://wa.me/${num}?text=${encodeURIComponent(mensagem())}" target="_blank" rel="noopener">Me chama no WhatsApp</a></p>` : ""}</div>`);
+      if ($("b-copchave")) $("b-copchave").onclick = async () => { try { await navigator.clipboard.writeText(est.codigo); $("b-copchave").textContent = "✅ Copiada!"; } catch (x) {} };
       $("b-share").onclick = () => {
         const url = location.href.split("#")[0].split("?")[0];
         if (navigator.share) navigator.share({ title: "Cidade Esperança", text: "Me ajuda a construir a Cidade Esperança! Cada doação vira uma casa 🏠", url }).catch(() => {});
@@ -209,6 +222,7 @@
       `Profissão: ${est.profissao || "-"}`, `Cor da casa: ${est.cor}`];
     if (est.valor >= 50) linhas.push(`🛍️ Lojinha: ${est.loja_nome}`, `Tipo: ${est.loja_tipo}`, `Vende: ${est.loja_vende || "-"}`, `Produtos:\n${est.produtos || "-"}`, `Contato: ${est.loja_contato || "-"}`);
     if (est.valor >= 100) linhas.push(`🗽 Frase da estátua: ${est.frase || "-"}`);
+    if (est.valor >= CE.MIN_OUTDOOR && est.outdoor) linhas.push(`📣 Outdoor: ${est.outdoor}`);
     linhas.push(`✅ Autorizo aparecer na cidade e nos vídeos.`);
     return linhas.filter(Boolean).join("\n");
   }

@@ -9,8 +9,16 @@
   window.ceJogo = jogo;
 
   // ---------------- modal
-  function modal(html) { $("m-corpo").innerHTML = html; $("modal").classList.add("on"); }
-  function fecha() { $("modal").classList.remove("on"); jogo.destaque = null; }
+  function modal(html, editor) {
+    if (aoFechar && !editor) { const f = aoFechar; aoFechar = null; f(); }
+    $("m-corpo").innerHTML = html; $("modal").classList.add("on"); $("modal").classList.toggle("editor", !!editor);
+    $("modal").querySelector(".modal").scrollTop = 0;
+  }
+  let aoFechar = null;
+  function fecha() {
+    $("modal").classList.remove("on", "editor"); jogo.destaque = null;
+    if (aoFechar) { const f = aoFechar; aoFechar = null; f(); }
+  }
   $("m-fechar").onclick = fecha;
   $("modal").addEventListener("click", ev => { if (ev.target.id === "modal") fecha(); });
   document.addEventListener("keydown", ev => { if (ev.key === "Escape") { fecha(); saiLoja(); } });
@@ -33,13 +41,17 @@
         <div><h2>${e(nome)}</h2>
           <span class="pill mini" style="background:${b.cor}">${b.icone} ${e(b.nome)}</span></div></div>
       ${m.profissao ? `<p style="font-size:1.2rem;margin:12px 0 4px">💼 <b>${e(m.profissao)}</b></p>` : ""}
+      ${m.arroba ? `<p style="margin:4px 0">${CE.NIVEIS_CASA[m.casa_nivel].icone} Mora num(a) <b>${CE.NIVEIS_CASA[m.casa_nivel].nome}</b>${m.pet ? ` · ${e(CE.PETS[m.pet])}` : ""}${m.carro ? ` · ${e(CE.CARROS[m.carro])}` : ""}</p>` : ""}
+      ${m.placa ? `<p style="margin:4px 0">🪧 “${e(m.placa)}”</p>` : ""}
       <p style="margin:4px 0">🏠 Morador desde <b>${e(CE.dataBR(m.chegou_em))}</b></p>
       ${selos ? `<div class="selos">${selos}</div>` : ""}
       ${m.exemplo ? `<p><span class="pill mini vermelho">EXEMPLO</span></p>` : ""}
       <div class="acoes">
         ${o.loja ? `<button class="btn" id="c-loja">🛍️ Visitar lojinha</button>` : ""}
         ${m.arroba ? `<button class="btn branco" id="c-comp">📤 Compartilhar minha casa</button>` : ""}
+        ${m.arroba ? `<button class="btn" id="c-chave" style="background:var(--amarelo)">🔑 É minha! Decorar</button>` : ""}
       </div>`);
+    if (m.arroba) $("c-chave").onclick = abrirChave;
     if (o.loja) $("c-loja").onclick = () => { fecha(); entraLoja(o.loja); };
     if (m.arroba) $("c-comp").onclick = () => compartilhar(url, `Eu moro na Cidade Esperança! Olha minha casa 🏠`);
   }
@@ -82,6 +94,102 @@
     else if (o.tipo === "lote") cardLote(o);
     else if (o.tipo === "placa") cardBairro(o);
     else if (o.tipo === "estatua") cardEstatua(o);
+    else if (o.tipo === "outdoor") cardOutdoor();
+  }
+
+  function cardOutdoor() {
+    const ms = dados.outdoor || [];
+    modal(`<h2>📣 Outdoor da cidade</h2>
+      ${ms.length ? ms.map(x => `<p style="margin:8px 0"><b style="color:var(--vermelho)">${e(x.arroba)}</b>: “${e(x.frase)}”</p>`).join("") : "<p>Ainda ninguém escreveu aqui… o primeiro recado pode ser o seu!</p>"}
+      <p class="nota">Quem doou <b>${CE.reais(CE.MIN_OUTDOOR)} ou mais</b> (somando as doações) escreve um recado no outdoor, pela 🔑 <b>Minha casa</b>. O recado aparece aqui e no próximo vídeo depois de aprovado.</p>
+      <div class="acoes"><button class="btn" style="background:var(--amarelo)" id="o-chave">🔑 Escrever meu recado</button><a class="btn verde" href="index.html#doar">💚 Doar</a></div>`);
+    $("o-chave").onclick = abrirChave;
+  }
+
+  // ---------------- 🔑 chave da casa: o morador decora a própria casa
+  const CHAVE_LS = "ce_chave";
+  const lerChave = () => { try { return localStorage.getItem(CHAVE_LS) || ""; } catch (x) { return ""; } };
+  const guardaChave = v => { try { localStorage.setItem(CHAVE_LS, v); } catch (x) {} };
+  let editando = false;
+  async function abrirChave() {
+    const cfg = await CE.config();
+    modal(`<h2>🔑 Minha casa</h2>
+      <p>Digite a <b>chave da sua casa</b>: é o código que apareceu quando você doou (começa com <b>CE</b> e também vai na descrição do seu PIX).</p>
+      <form id="f-chave"><input type="text" id="i-chave" placeholder="CE……" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="14" value="${e(lerChave())}">
+      <div class="acoes"><button class="btn verde" type="submit" id="b-entrar">🚪 Entrar na minha casa</button></div></form>
+      <p class="erro" id="r-chave"></p>
+      <p class="nota">Com a chave você troca a cor e o telhado, ganha pet e carro, escreve a placa da porta e (doando ${CE.reais(CE.MIN_OUTDOOR)}+) o recado do outdoor. O que você montar aparece no próximo vídeo!</p>
+      <p class="nota">Perdeu a chave? Manda um direct pro <b>${e(cfg.perfil || "@cidadeep")}</b> com o seu @. Ainda não é morador? <a href="index.html#doar">Doe a partir de R$ 1</a> e ganhe a sua.</p>`);
+    $("f-chave").onsubmit = async ev => {
+      ev.preventDefault();
+      const codigo = $("i-chave").value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (codigo.length < 6) { $("r-chave").textContent = "A chave tem pelo menos 6 letras/números (ex.: CEAB12)."; return; }
+      $("b-entrar").disabled = true; $("b-entrar").textContent = "Abrindo a porta…";
+      const r = await CE.chave(cfg, { acao: "entrar", codigo });
+      if ($("b-entrar")) { $("b-entrar").disabled = false; $("b-entrar").textContent = "🚪 Entrar na minha casa"; }
+      if (!r.ok) {
+        $("r-chave").textContent = { chave: "Não achei essa chave 🤔 Confere as letras e tenta de novo.",
+          pendente: "Sua doação ainda está sendo conferida. Assim que a casa aparecer na cidade, a chave funciona!",
+          espera: "Muitas tentativas agora. Espera uns minutinhos e tenta de novo.",
+          off: "A chave ainda não está ativada neste site." }[r.erro] || "Não consegui falar com a cidade agora. Tenta de novo em instantes.";
+        return;
+      }
+      guardaChave(codigo); editor(r, codigo, cfg);
+    };
+  }
+
+  function editor(info, codigo, cfg) {
+    const o = jogo.acharMorador(info.arroba);
+    if (!o) { modal(`<h2>🏗️ Quase lá!</h2><p>Sua casa (${e(info.arroba || "sem @")}) ainda está sendo construída no mapa. Volta daqui a 1 minutinho.</p>`); return; }
+    const m = o.m, orig = { cor_casa: m.cor_casa, cor: o.cor, telhado: m.telhado, pet: m.pet, carro: m.carro, placa: m.placa };
+    const st = { cor: CE.CORES_CASA[info.cor] ? info.cor : m.cor_casa, telhado: info.telhado || "classico", pet: info.pet || "", carro: info.carro || "",
+      placa: info.placa || "", outdoor: info.outdoor || "" };
+    const aplica = () => { m.cor_casa = st.cor; o.cor = CE.CORES_CASA[st.cor]; m.telhado = st.telhado; m.pet = st.pet; m.carro = st.carro; m.placa = st.placa; };
+    let salvo = false;
+    editando = true; aplica();
+    const N = CE.NIVEIS_CASA[info.casa_nivel] || CE.NIVEIS_CASA[1], prox = CE.NIVEIS_CASA[info.casa_nivel + 1];
+    const chips = (nome, mapa, atual) => `<div class="chips peq">${Object.entries(mapa).map(([k, v]) => `<button type="button" class="chip ${k === atual ? "sel" : ""}" data-${nome}="${k}">${e(v)}</button>`).join("")}</div>`;
+    const tela = () => {
+      modal(`<h2>🔑 Casa de ${e(info.arroba)}</h2>
+        <div class="nivel-casa"><span class="ic">${N.icone}</span><span>Nível ${info.casa_nivel}: <b>${N.nome}</b><br>
+          <span class="nota">${prox ? `Doando mais ${CE.reais(info.falta_proximo)} ela vira <b>${prox.icone} ${prox.nome}</b>!` : "Nível máximo 👑"}</span></span></div>
+        <label class="campo">Cor</label>
+        <div class="cores">${Object.entries(CE.CORES_CASA).map(([k, c]) => `<button type="button" data-cor="${k}" class="${st.cor === k ? "sel" : ""}" style="background:${c}" aria-label="${k}"></button>`).join("")}</div>
+        <label class="campo">Telhado</label>${chips("tel", CE.TELHADOS, st.telhado)}
+        <label class="campo">Pet</label>${chips("pet", CE.PETS, st.pet)}
+        <label class="campo">Carro na garagem</label>${chips("car", CE.CARROS, st.carro)}
+        <label class="campo" for="e-placa">🪧 Placa da porta (até 20 letras)</label>
+        <input type="text" id="e-placa" maxlength="20" placeholder="Ex.: Lar doce lar" value="${e(st.placa)}">
+        <label class="campo" for="e-out">📣 Recado no outdoor da cidade</label>
+        ${info.pode_outdoor ? `<textarea id="e-out" maxlength="60" placeholder="Um recado pra cidade inteira (até 60 letras)">${e(st.outdoor)}</textarea>
+          <p class="nota">${info.outdoor_aprovado && st.outdoor ? "✅ Seu recado está no outdoor." : "O recado aparece depois de aprovado (sem palavrão nem propaganda enganosa)."}</p>`
+          : `<p class="nota">🔒 Libera quando você completar ${CE.reais(CE.MIN_OUTDOOR)} em doações (faltam ${CE.reais(info.falta_outdoor)}).</p>`}
+        <p class="erro" id="e-erro"></p>
+        <div class="acoes"><button class="btn branco" id="e-sair">Sair</button><button class="btn verde grande" id="e-salvar">💾 Salvar minha casa</button></div>`, true);
+      document.querySelectorAll("[data-cor]").forEach(b => b.onclick = () => { st.cor = b.dataset.cor; aplica(); tela(); });
+      document.querySelectorAll("[data-tel]").forEach(b => b.onclick = () => { st.telhado = b.dataset.tel; aplica(); tela(); });
+      document.querySelectorAll("[data-pet]").forEach(b => b.onclick = () => { st.pet = b.dataset.pet; aplica(); tela(); });
+      document.querySelectorAll("[data-car]").forEach(b => b.onclick = () => { st.carro = b.dataset.car; aplica(); tela(); });
+      $("e-placa").oninput = ev => { st.placa = ev.target.value; aplica(); };
+      if ($("e-out")) $("e-out").oninput = ev => { st.outdoor = ev.target.value; };
+      $("e-sair").onclick = fecha;
+      $("e-salvar").onclick = async () => {
+        $("e-salvar").disabled = true; $("e-salvar").textContent = "Salvando…";
+        const r = await CE.chave(cfg, Object.assign({ acao: "salvar", codigo }, st));
+        if (!r.ok) { $("e-erro").textContent = "Não deu pra salvar agora 😢 Tenta de novo em instantes."; $("e-salvar").disabled = false; $("e-salvar").textContent = "💾 Salvar minha casa"; return; }
+        salvo = true;
+        modal(`<div class="centro"><div style="font-size:3.5rem">🏡</div><h2 style="margin:0 0 8px">Casa salva! ✅</h2>
+          <p>Em até 1 minuto todo mundo que abrir a cidade vê a sua casa nova. E ela vai aparecer assim no próximo vídeo 🎥</p>
+          ${r.outdoor_pendente ? `<p class="nota">📣 Seu recado do outdoor vai aparecer assim que for aprovado.</p>` : ""}
+          <div class="acoes" style="justify-content:center"><button class="btn branco" id="s-comp">📤 Mostrar minha casa</button><button class="btn verde" id="s-ok">Fechar</button></div></div>`, true);
+        $("s-ok").onclick = fecha;
+        $("s-comp").onclick = () => compartilhar(base() + "?morador=" + encodeURIComponent(info.arroba), "Olha como ficou minha casa na Cidade Esperança 🏡");
+      };
+    };
+    aoFechar = () => { editando = false; if (!salvo) Object.assign(m, { cor_casa: orig.cor_casa, telhado: orig.telhado, pet: orig.pet, carro: orig.carro, placa: orig.placa }), o.cor = orig.cor; };
+    jogo.destaque = null;
+    jogo.voarPara(o.i + .5, o.j + .5, 2.4, null, jogo.H * .14 / 2.4);
+    tela();
   }
 
   // ---------------- dentro da lojinha
@@ -119,6 +227,7 @@
   $("b-hosp").onclick = () => { const h = jogo.hospital(); jogo.voarPara(h.i + 1.5, h.j + 1.5, 1.4, cardHospital); };
   $("b-centro").onclick = () => jogo.voarPara(2.5, 2.5, jogo.zInicial());
   $("b-mini").onclick = () => $("minimapa").classList.toggle("on");
+  $("b-chave").onclick = abrirChave;
   $("b-busca").onclick = () => {
     modal(`<h2>🔍 Cadê minha casa?</h2><p>Digite o seu @ e o drone te leva até lá.</p>
       <form id="f-busca"><input type="text" id="i-busca" placeholder="@seu_arroba" autocomplete="off" autocapitalize="none">
@@ -164,6 +273,7 @@
 
   // ---------------- dados
   async function atualiza(primeira) {
+    if (editando) return;
     const d = await CE.carregar();
     if (!primeira && dados && JSON.stringify(d) === JSON.stringify(dados)) return;
     dados = d; jogo.setDados(d, !primeira); hud();
@@ -174,6 +284,7 @@
   setInterval(() => atualiza(false), 60000);
 
   const q = new URLSearchParams(location.search);
-  if (q.get("morador")) setTimeout(() => procura(q.get("morador")), 400);
+  if (q.get("chave") !== null) setTimeout(abrirChave, 400);
+  else if (q.get("morador")) setTimeout(() => procura(q.get("morador")), 400);
   else if (q.get("loja")) { const o = jogo.acharLoja(q.get("loja")); if (o) setTimeout(() => entraLoja(o), 400); }
 })();
