@@ -30,7 +30,8 @@
  * Banco da Cidade (versão 3) — aba "Banco", criada sozinha:
  *  - Cada R$ 1 doado (com ✅) = 1 Esperança Coin (EC). É moeda SÓ DO JOGO: não vale dinheiro,
  *    não se saca e não é investimento de verdade.
- *  - O morador abre a conta com a chave da casa, guarda EC no cofre (rende 12% ao ano EM COINS),
+ *  - O morador abre a conta com a chave da casa, guarda EC no cofre (rende 50% AO DIA em coins,
+ *    sempre sobre o que a pessoa guardou — juros simples, pra não virar número infinito),
  *    compra itens raros (telhado de ouro, pet dragão) e aparece no ranking (se quiser).
  *  - Nenhum dado pessoal (telefone, e-mail, PIX) é pedido nem guardado.
  */
@@ -53,9 +54,9 @@ const MIN_OUTDOOR = 20;
 // ---- Banco da Cidade (moeda do jogo)
 const ABA_BANCO = "Banco";
 const COLS_BANCO = ["@ (minúsculo)", "@", "Conta aberta em", "Cofre base (EC)", "Cofre desde", "Depositado (EC)", "Resgatado (EC)",
-  "Gasto (EC)", "Itens", "No ranking"];
-const B = { k: 0, arroba: 1, aberta: 2, base: 3, desde: 4, dep: 5, resg: 6, gasto: 7, itens: 8, rank: 9 };
-const JUROS_ANO = 0.12;
+  "Gasto (EC)", "Itens", "No ranking", "Rendimento guardado (EC)"];
+const B = { k: 0, arroba: 1, aberta: 2, base: 3, desde: 4, dep: 5, resg: 6, gasto: 7, itens: 8, rank: 9, jur: 10 };
+const JUROS_DIA = 0.5;   // 50% ao dia sobre o que está guardado (juros simples)
 const ITENS = { ouro: { nome: "Telhado de ouro", preco: 60 }, dragao: { nome: "Pet dragão", preco: 30 } };
 const ACOES_BANCO = ["banco", "abrir", "depositar", "resgatar", "comprar", "ranking"];
 
@@ -226,15 +227,19 @@ function abaBanco_() {
     sh = ss.insertSheet(ABA_BANCO);
     sh.getRange(1, 1, 1, COLS_BANCO.length).setValues([COLS_BANCO]).setFontWeight("bold").setBackground("#ffd23a");
     sh.setFrozenRows(1);
+  } else if (sh.getLastColumn() < COLS_BANCO.length) {
+    sh.getRange(1, 1, 1, COLS_BANCO.length).setValues([COLS_BANCO]).setFontWeight("bold").setBackground("#ffd23a");
   }
   return sh;
 }
 function r2_(v) { return Math.round((Number(v) || 0) * 100) / 100; }
-function cofreAgora_(r) {
+// cofre = guardado + rendimento já contado + 50% ao dia do guardado desde a última mexida
+function rendeAgora_(r) {
   const base = Number(r[B.base]) || 0, desde = r[B.desde] instanceof Date ? r[B.desde].getTime() : Date.now();
   const dias = Math.max(0, (Date.now() - desde) / 86400000);
-  return base * Math.pow(1 + JUROS_ANO, dias / 365);
+  return (Number(r[B.jur]) || 0) + base * JUROS_DIA * dias;
 }
+function cofreAgora_(r) { return (Number(r[B.base]) || 0) + rendeAgora_(r); }
 function contaDe_(arroba) {
   const sh = abaBanco_(), k = String(arroba || "").toLowerCase();
   const vals = sh.getDataRange().getValues();
@@ -247,12 +252,12 @@ function itensDe_(arroba) {
 }
 function estadoConta_(g, c) {
   const coins = Math.floor(g.total);
-  const base = { ok: true, arroba: g.arroba, coins_doados: coins, juros_ano: JUROS_ANO, loja: ITENS };
-  if (!c.r) return Object.assign(base, { aberta: false, carteira: coins, cofre: 0, itens: [], ranking: true });
+  const base = { ok: true, arroba: g.arroba, coins_doados: coins, juros_dia: JUROS_DIA, loja: ITENS };
+  if (!c.r) return Object.assign(base, { aberta: false, carteira: coins, cofre: 0, guardado: 0, itens: [], ranking: true });
   const r = c.r;
   return Object.assign(base, { aberta: true,
     carteira: r2_(coins - (Number(r[B.dep]) || 0) + (Number(r[B.resg]) || 0) - (Number(r[B.gasto]) || 0)),
-    cofre: Math.floor(cofreAgora_(r) * 10000) / 10000, itens: String(r[B.itens] || "").split(",").map(x => x.trim()).filter(Boolean),
+    cofre: Math.floor(cofreAgora_(r) * 10000) / 10000, guardado: Number(r[B.base]) || 0, itens: String(r[B.itens] || "").split(",").map(x => x.trim()).filter(Boolean),
     ranking: r[B.rank] === true });
 }
 function banco_(g, d) {
@@ -261,7 +266,7 @@ function banco_(g, d) {
   const salva = vals => { c.sh.getRange(c.linha, 1, 1, vals.length).setValues([vals]); c = contaDe_(g.arroba); CacheService.getScriptCache().remove("cidade"); };
   if (d.acao === "abrir") {
     if (!c.r) {
-      c.sh.appendRow([g.arroba.toLowerCase(), "'" + g.arroba, new Date(), 0, new Date(), 0, 0, 0, "", d.ranking !== false]);
+      c.sh.appendRow([g.arroba.toLowerCase(), "'" + g.arroba, new Date(), 0, new Date(), 0, 0, 0, "", d.ranking !== false, 0]);
       c = contaDe_(g.arroba); CacheService.getScriptCache().remove("cidade");
     }
     return json_(estadoConta_(g, c));
@@ -272,11 +277,13 @@ function banco_(g, d) {
   const qtd = Math.floor(Number(d.qtd) || 0);
   if (d.acao === "depositar") {
     if (qtd < 1 || qtd > Math.floor(est.carteira)) return json_(Object.assign(est, { ok: false, erro: "saldo" }));
-    r[B.base] = cofreAgora_(r) + qtd; r[B.desde] = new Date(); r[B.dep] = (Number(r[B.dep]) || 0) + qtd; salva(r);
+    r[B.jur] = rendeAgora_(r); r[B.base] = (Number(r[B.base]) || 0) + qtd; r[B.desde] = new Date(); r[B.dep] = (Number(r[B.dep]) || 0) + qtd; salva(r);
   } else if (d.acao === "resgatar") {
-    const agora = cofreAgora_(r);
-    if (qtd < 1 || qtd > Math.floor(agora)) return json_(Object.assign(est, { ok: false, erro: "saldo" }));
-    r[B.base] = agora - qtd; r[B.desde] = new Date(); r[B.resg] = (Number(r[B.resg]) || 0) + qtd; salva(r);
+    const rende = rendeAgora_(r), guard = Number(r[B.base]) || 0;
+    if (qtd < 1 || qtd > Math.floor(guard + rende)) return json_(Object.assign(est, { ok: false, erro: "saldo" }));
+    const doRende = Math.min(rende, qtd);                         // tira primeiro do rendimento, depois do guardado
+    r[B.jur] = rende - doRende; r[B.base] = guard - (qtd - doRende); r[B.desde] = new Date();
+    r[B.resg] = (Number(r[B.resg]) || 0) + qtd; salva(r);
   } else if (d.acao === "comprar") {
     const it = ITENS[d.item];
     if (!it || est.itens.indexOf(d.item) >= 0) return json_(Object.assign(est, { ok: false, erro: "item" }));

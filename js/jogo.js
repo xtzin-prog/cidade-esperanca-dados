@@ -256,11 +256,11 @@
       };
       return;
     }
-    const ano = r.cofre * (1 + CE.JUROS_ANO), dia = r.cofre * (Math.pow(1 + CE.JUROS_ANO, 1 / 365) - 1);
+    const guard = Number(r.guardado) || 0, dia = guard * CE.JUROS_DIA, semana = r.cofre + dia * 7;
     modal(`<h2>🏦 Conta de ${e(r.arroba)}</h2>
       <div class="saldos">
         <div class="saldo-ec"><span>👛 Carteira</span><b>🪙 ${fmtEC(r.carteira)}</b><span class="nota">pra gastar ou guardar</span></div>
-        <div class="saldo-ec cofre"><span>🔒 Cofre</span><b>🪙 ${fmtEC(r.cofre)}</b><span class="nota">${r.cofre > 0 ? `+${dia.toFixed(3)} EC por dia · em 1 ano ≈ ${fmtEC(ano)}` : "rende 12% ao ano em coins"}</span></div>
+        <div class="saldo-ec cofre"><span>🔒 Cofre</span><b>🪙 ${fmtEC(r.cofre)}</b><span class="nota">${guard > 0 ? `+${fmtEC(dia)} EC por dia · em 7 dias ≈ ${fmtEC(semana)}` : "rende 50% ao dia em coins"}</span></div>
       </div>
       <label class="campo" for="bk-qtd">Quantas coins?</label>
       <input type="number" id="bk-qtd" min="1" step="1" inputmode="numeric" value="${Math.max(1, Math.floor(r.carteira) || Math.floor(r.cofre))}">
@@ -271,9 +271,17 @@
         <div style="font-size:2rem">${it.icone}</div><b>${e(it.nome)}</b><span>🪙 ${it.preco} EC</span>
         ${(r.itens || []).includes(k) ? `<span class="pill mini verde">✅ É seu</span>` : `<button class="btn" data-comprar="${k}" ${r.carteira < it.preco ? "disabled" : ""}>Comprar</button>`}</div>`).join("")}</div>
       <p class="nota">Comprou? Use em <a href="#" id="bk-casa">🔑 Minha casa</a>.</p>
+      <div class="acoes"><a class="btn verde" href="index.html?arroba=${encodeURIComponent(r.arroba)}#doar">💚 Doar de novo (as coins caem aqui)</a></div>
       <label class="check"><input type="checkbox" id="bk-rank" ${r.ranking ? "checked" : ""}> Aparecer no ranking do banco</label>
       <h3 style="margin:14px 0 4px">🏆 Maiores investidores</h3>${rankingHTML(10)}
       ${AVISO_EC}${FESTA}`);
+    // o cofre sobe ao vivo na tela
+    const t0 = Date.now(), elCofre = document.querySelector(".saldo-ec.cofre b");
+    clearInterval(window._ceCofre);
+    if (guard > 0 && elCofre) window._ceCofre = setInterval(() => {
+      if (!document.body.contains(elCofre)) { clearInterval(window._ceCofre); return; }
+      elCofre.textContent = "🪙 " + (r.cofre + dia * (Date.now() - t0) / 86400000).toLocaleString("pt-BR", { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+    }, 200);
     const acao = async (extra, botao) => {
       document.querySelectorAll("#m-corpo button").forEach(x => x.disabled = true);
       if (botao) botao.textContent = "…";

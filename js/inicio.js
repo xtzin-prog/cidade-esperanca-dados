@@ -85,6 +85,8 @@
     if (est.valor < ITENS[est.item].min) est.valor = ITENS[est.item].valores[0];
     est.passo = 1; render();
   });
+  const qa = new URLSearchParams(location.search).get("arroba");
+  if (qa) { est.arroba = qa.startsWith("@") ? qa : "@" + qa; est.ok = false; }
   if (location.hash === "#doar") setTimeout(() => { est.passo = 1; render(); }, 300);
 
   const passos = n => `<div class="passos-doacao">${[1, 2, 3].map(k => `<span class="${k <= n ? "on" : ""}"></span>`).join("")}</div>`;
@@ -117,6 +119,7 @@
       const loja = est.valor >= 50, estatua = est.valor >= 100;
       modalAbre(`${passos(2)}<h2>${ITENS[est.item].icone} Seu morador</h2>
         <label class="campo" for="f-arroba">Seu @ (pra aparecer na cidade e no vídeo)</label>
+        <p class="nota" style="margin:0 0 6px">🔁 <b>Já é morador?</b> Use o <b>mesmo @</b>: as coins caem na mesma conta do banco, a casa sobe de nível e a sua chave antiga continua valendo.</p>
         <input type="text" id="f-arroba" placeholder="@seu_arroba (deixe vazio pra ser Morador misterioso)" value="${e(est.arroba)}" autocapitalize="none" maxlength="40">
         <label class="campo" for="f-rede">De qual rede? (define o seu bairro)</label>
         <select id="f-rede">${Object.entries(CE.BAIRROS).map(([k, b]) => `<option value="${k}" ${est.rede === k ? "selected" : ""}>${b.icone} ${b.nome.replace("Bairro ", "")}</option>`).join("")}</select>
@@ -204,6 +207,7 @@
         ${est.codigo ? `<div class="cartao" style="margin:12px 0;background:var(--creme)"><b>🔑 A chave da sua casa:</b>
           <div style="font-size:1.8rem;font-weight:800;letter-spacing:2px;margin:4px 0" id="s-chave">${e(est.codigo)}</div>
           <button class="btn branco" id="b-copchave">📋 Copiar chave</button>
+          <p class="nota">Já era morador com esse @? Pode usar a chave antiga ou essa nova: as duas abrem a mesma casa e a mesma conta, e as coins já somam.</p>
           <p class="nota">Tira um print! Quando a casa aparecer, toque em <b>🔑 Minha casa</b> na cidade e decore: cor, telhado, pet, carro, placa${est.valor >= CE.MIN_OUTDOOR ? " e o recado do outdoor" : ""}.</p></div>` : ""}
         <p>Depois é só tocar em <b>🔍 Cadê minha casa?</b> e o drone te leva até lá. E fica de olho no próximo vídeo 👀</p>
         <div class="acoes" style="justify-content:center">

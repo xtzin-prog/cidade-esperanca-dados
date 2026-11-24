@@ -29,7 +29,7 @@
   // itens raros do Banco da Cidade (comprados com Esperança Coins, a moeda do jogo)
   const ITENS_RAROS = { ouro: { nome: "Telhado de ouro", icone: "👑", preco: 60, campo: "telhado" },
     dragao: { nome: "Pet dragão", icone: "🐉", preco: 30, campo: "pet" } };
-  const JUROS_ANO = 0.12;
+  const JUROS_DIA = 0.5;   // cofre do banco: 50% ao dia sobre o que está guardado (juros simples)
   const CARROS = { "": "Nenhum", carro: "🚗 Carro", esportivo: "🏎️ Esportivo", moto: "🏍️ Moto" };
   const MIN_OUTDOOR = 20;
 
@@ -164,5 +164,5 @@
     return d && m ? `${d}/${m}/${a}` : s;
   }
 
-  window.CE = { carregar, config, enviarDoacao, chave, ITENS_RAROS, JUROS_ANO, NIVEIS_CASA, TELHADOS, PETS, CARROS, MIN_OUTDOOR, dia, reais, esc, linkSeguro, dataBR, BAIRROS, CORES_CASA, TIPOS_LOJA, CONQUISTAS };
+  window.CE = { carregar, config, enviarDoacao, chave, ITENS_RAROS, JUROS_DIA, NIVEIS_CASA, TELHADOS, PETS, CARROS, MIN_OUTDOOR, dia, reais, esc, linkSeguro, dataBR, BAIRROS, CORES_CASA, TIPOS_LOJA, CONQUISTAS };
 })();
