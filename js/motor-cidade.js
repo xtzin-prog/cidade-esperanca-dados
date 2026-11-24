@@ -349,21 +349,23 @@
           const pul = Math.abs(Math.sin(t * 5 + k * 9)) * 2.5, vira = Math.cos(t * .6 + hash(m.id) % 9) > 0 ? 1 : -1;
           this.pet(pp[0], pp[1], m.pet, pul, vira);
         }
-        // plaquinha na porta
-        if (!misterio && m.placa && this.z > .95) {
-          const pp = P(o.i + .3, o.j + 1.9);
-          c.fillStyle = "#6b4a2e"; c.fillRect(pp[0] - 1, pp[1] - 13, 2, 13);
-          c.font = `800 5px "Baloo 2", system-ui, sans-serif`; const tw = Math.min(60, c.measureText(m.placa).width + 8);
-          c.fillStyle = "#fff8e0"; c.strokeStyle = "#6b4a2e"; c.lineWidth = 1; this.rr(pp[0] - tw / 2, pp[1] - 21, tw, 8.5, 2); c.fill(); c.stroke();
-          c.fillStyle = "#3a2410"; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(m.placa, pp[0], pp[1] - 16.6, tw - 4);
-        }
+        // placa + @ + NOVO! em cima da casa, desenhados por último (nenhuma casa cobre)
         const topo = [cc[0], cc[1] - topoH - 10 - pulo];
-        if (misterio) this.pilula(topo[0], topo[1], "?", "#fff", "#1a1a1a", 10);
-        else if (mostraRot || destacado) this.pilula(topo[0], topo[1], (nv === 4 ? "👑 " : "") + m.arroba, nv === 4 ? "#ffd23a" : "#fff", "#1a1a1a", destacado ? 12 : 9);
         const novo = m.chegou_em && (Date.now() - new Date(m.chegou_em + "T12:00:00-03:00")) < 2 * 86400000;
-        if (novo && Math.sin(t * 5) > -0.3) this.pilula(topo[0], topo[1] - 18, "NOVO!", "#ffd23a", "#1a1a1a", 8);
+        const verPlaca = !misterio && m.placa && (this.z > .95 || destacado);
+        this._rot.push(() => {
+          let y = topo[1];
+          if (verPlaca) {
+            const r = this.pilula(topo[0], y, "“" + m.placa + "”", "#f6dfa8", "#3a2410", destacado ? 11 : 8.5);
+            c.fillStyle = "#6b4a2e"; c.fillRect(topo[0] - 1, y, 2, 7);
+            y = r[1] - 4;
+          }
+          if (misterio) y = this.pilula(topo[0], y, "?", "#fff", "#1a1a1a", 10)[1] - 4;
+          else if (mostraRot || destacado) y = this.pilula(topo[0], y, (nv === 4 ? "👑 " : "") + m.arroba, nv === 4 ? "#ffd23a" : "#fff", "#1a1a1a", destacado ? 12 : 9)[1] - 4;
+          if (novo && Math.sin(t * 5) > -0.3) this.pilula(topo[0], y, "NOVO!", "#ffd23a", "#1a1a1a", 8);
+        });
         const ccl = P(o.i + 1, o.j + 1);
-        box = [ccl[0] - 60, cc[1] - topoH - 30, 120, ccl[1] - cc[1] + topoH + 60];
+        box = [ccl[0] - 60, cc[1] - topoH - 55, 120, ccl[1] - cc[1] + topoH + 85];
       } else if (o.tipo === "loja") {
         const w = 1.25, d = 1.25, h = 40, i0 = o.i + 1 - w / 2, j0 = o.j + .9 - d / 2;
         const cor = CE.CORES_CASA[o.l.cor] || "#e8402a";
@@ -495,7 +497,7 @@
         }
       }
       // objetos + bonecos + carros, em ordem de profundidade
-      this.hits = [];
+      this.hits = []; this._rot = [];
       const vis = o => o.i >= iMin - 3 && o.i <= iMax && o.j >= jMin - 3 && o.j <= jMax;
       const extra = [];
       this.andantes.forEach(a => {
@@ -525,6 +527,8 @@
           c.fillStyle = "#bfe8ff"; this.rr(x - 4, y - 12, 8, 4, 2); c.fill();
         } else this.obj(o);
       }
+      // etiquetas das casas por cima de tudo
+      for (const f of this._rot) f();
       // nuvens (sombras passando)
       c.fillStyle = "rgba(255,255,255,.18)";
       for (let n = 0; n < 4; n++) {
