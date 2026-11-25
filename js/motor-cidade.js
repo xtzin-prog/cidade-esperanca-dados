@@ -249,6 +249,27 @@
       if (esp) { c.fillStyle = "#fff"; c.fillRect(x - L / 2 + 1, y - A + 1, L - 2, 1.4); c.fillStyle = "#1a1a1a"; c.fillRect(x - L / 2 - 1, y - A - 4, 4, 1.5); }
       c.fillStyle = "#1a1a1a"; c.beginPath(); c.arc(x - L / 2 + 4, y - 1.5, 2.2, 0, 7); c.arc(x + L / 2 - 4, y - 1.5, 2.2, 0, 7); c.fill();
     }
+    // ---------- texto com emoji (medido à parte: no iPhone o measureText não conta a largura dos emojis)
+    pedacos(txt) {
+      const re = /(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic}|[\u{1F3FB}-\u{1F3FF}])*)/gu;
+      return String(txt).split(re).filter(Boolean).map(p => ({ p, emoji: /\p{Extended_Pictographic}/u.test(p) }));
+    }
+    medeMisto(txt, fonte, tam) {
+      const c = this.ctx; c.font = fonte;
+      return this.pedacos(txt).reduce((w, q) => w + (q.emoji ? tam * 1.2 : c.measureText(q.p).width), 0);
+    }
+    textoMisto(txt, xc, y, fonte, tam, cor) {
+      const c = this.ctx, w = this.medeMisto(txt, fonte, tam);
+      let x = xc - w / 2;
+      c.textBaseline = "middle"; c.textAlign = "left";
+      for (const q of this.pedacos(txt)) {
+        if (q.emoji) {
+          c.font = `${tam}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`; c.textAlign = "center";
+          c.fillStyle = "#1a1a1a"; c.fillText(q.p, x + tam * .6, y); x += tam * 1.2; c.textAlign = "left";
+        } else { c.font = fonte; c.fillStyle = cor; c.fillText(q.p, x, y); x += c.measureText(q.p).width; }
+      }
+      c.textAlign = "center";
+    }
     pet(x, y, tipo, pul, vira) {
       const c = this.ctx, E = (cx, cy, rx, ry, cor) => { c.fillStyle = cor; c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, 7); c.fill(); c.stroke(); };
       c.fillStyle = "rgba(0,0,0,.22)"; c.beginPath(); c.ellipse(x, y, 7, 2.6, 0, 0, 7); c.fill();
@@ -488,12 +509,24 @@
         c.fillText("📣 OUTDOOR DA CIDADE", cc[0], y0 - H + 4.8);
         let a = "SEU RECADO AQUI", f = "Doe R$ 20+ e escreva aqui!";
         if (msgs.length) { const mm = msgs[Math.floor(t / 6) % msgs.length]; a = mm.arroba; f = mm.frase; }
-        c.fillStyle = "#e8402a"; c.font = `800 7.5px "Baloo 2", system-ui, sans-serif`; c.fillText(a, cc[0], y0 - H + 16, W - 8);
-        c.fillStyle = "#1a1a1a"; c.font = `700 7px "Baloo 2", system-ui, sans-serif`;
-        const linhas = []; let lin = "";
-        for (const p of String(f).split(" ")) { const tst = lin ? lin + " " + p : p; if (c.measureText(tst).width > W - 10 && lin) { linhas.push(lin); lin = p; } else lin = tst; }
-        if (lin) linhas.push(lin);
-        linhas.slice(0, 3).forEach((l, n) => c.fillText(l, cc[0], y0 - H + 25 + n * 7.5, W - 8));
+        // texto medido e desenhado por pedaços (no iPhone o measureText erra emoji e desalinha tudo)
+        const larg = W - 10;
+        let fa = 7.5; while (fa > 5 && this.medeMisto(a, `800 ${fa}px "Baloo 2", system-ui, sans-serif`, fa) > larg) fa -= .5;
+        this.textoMisto(a, cc[0], y0 - H + 16, `800 ${fa}px "Baloo 2", system-ui, sans-serif`, fa, "#e8402a");
+        let ff = 7, linhas = [];
+        for (; ff >= 5; ff -= .5) {
+          const fonte = `700 ${ff}px "Baloo 2", system-ui, sans-serif`;
+          linhas = []; let lin = "";
+          for (const p of String(f).split(/\s+/).filter(Boolean)) {
+            const tst = lin ? lin + " " + p : p;
+            if (this.medeMisto(tst, fonte, ff) > larg && lin) { linhas.push(lin); lin = p; } else lin = tst;
+          }
+          if (lin) linhas.push(lin);
+          if (linhas.length <= 3 && linhas.every(l => this.medeMisto(l, fonte, ff) <= larg)) break;
+        }
+        ff = Math.max(5, ff);
+        const fonteF = `700 ${ff}px "Baloo 2", system-ui, sans-serif`, alt = ff + .6;
+        linhas.slice(0, 3).forEach((l, n) => this.textoMisto(l, cc[0], y0 - H + 25 + n * alt, fonteF, ff, "#1a1a1a"));
         box = [cc[0] - W / 2 - 4, y0 - H - 4, W + 8, H + 34];
       } else if (o.tipo === "arvore") {
         const cc = P(o.i + .5, o.j + .5), sw = Math.sin(t * 1.5 + o.s) * 1.2;
