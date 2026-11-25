@@ -88,8 +88,49 @@
   const qa = new URLSearchParams(location.search).get("arroba");
   if (qa) { est.arroba = qa.startsWith("@") ? qa : "@" + qa; est.ok = false; }
   if (location.hash === "#doar") setTimeout(() => { est.passo = 1; render(); }, 300);
+  else boasVindas();
+
+  // popup de boas-vindas: aparece só na primeira visita (lembrado neste navegador)
+  function boasVindas() {
+    let viu = false;
+    try { viu = localStorage.getItem("ce_boasvindas") === "1"; } catch (x) {}
+    if (viu || new URLSearchParams(location.search).has("arroba")) return;
+    setTimeout(() => {
+      if ($("modal").classList.contains("on")) return;
+      try { localStorage.setItem("ce_boasvindas", "1"); } catch (x) {}
+      const pct = Math.min(100, dados.arrecadado / dados.meta * 100);
+      modalAbre(`<div class="boasvindas">
+        <div class="bv-topo">💛</div>
+        <h2>Me dá 1 minuto?</h2>
+        <p class="bv-texto">Desde criança eu tenho <b>estrabismo no olho direito</b>. A cirurgia custa <b>${CE.reais(dados.meta)}</b> e sozinho eu não consigo.</p>
+        <p class="bv-texto">Por isso essa cidade existe: <b>cada doação vira uma casa</b> e faz o hospital da minha cirurgia subir. 🏥</p>
+        <div class="bv-prova">
+          <span>🏠 <b>${dados.moradores.length} moradores</b> já ajudaram</span>
+          <div class="barra"><div style="width:${Math.max(2, pct)}%"></div></div>
+          <span class="nota">${CE.reais(dados.arrecadado)} de ${CE.reais(dados.meta)}</span>
+        </div>
+        <ul class="bv-ganha">
+          <li>🏠 Sua casa com o seu <b>@</b> e a sua profissão</li>
+          <li>🔑 A chave pra decorar: cor, telhado, pet, carro</li>
+          <li>🎥 Você aparece nos próximos vídeos</li>
+        </ul>
+        <button class="btn verde grande bv-doar" data-doar="morador">🏠 DOAR E ENTRAR NA CIDADE</button>
+        <p class="nota centro" style="margin:8px 0 0">A partir de <b>R$ 1</b> · PIX na hora · qualquer valor ajuda</p>
+        <button class="bv-depois" id="bv-depois">Agora não, só quero ver a cidade</button>
+      </div>`);
+      $("bv-depois").onclick = fecha;
+    }, 900);
+  }
 
   const passos = n => `<div class="passos-doacao">${[1, 2, 3].map(k => `<span class="${k <= n ? "on" : ""}"></span>`).join("")}</div>`;
+  function nivelCasa(v) { return v >= 100 ? "🏰 Mansão" : v >= 30 ? "🏘️ Sobrado" : v >= 10 ? "🏡 Casa" : "🏠 Casinha"; }
+  function beneficios(v) {
+    const b = [`${nivelCasa(v)} com o seu @ e profissão`, "🔑 Chave pra decorar a casa", `🪙 ${Math.floor(v)} Esperança Coins (moeda do jogo)`];
+    if (v >= 20) b.push("📣 Seu recado no outdoor da cidade");
+    if (v >= 50) b.push("🛍️ Lojinha divulgada no próximo vídeo");
+    if (v >= 100) b.push("🗽 Estátua dourada na praça");
+    return b;
+  }
   function itemPorValor() { return est.valor >= 100 ? "estatua" : est.valor >= 50 ? "lojinha" : "morador"; }
 
   function render() {
@@ -101,6 +142,8 @@
         <div class="chips">${ITENS[est.item].valores.map(v => `<button class="chip ${est.valor === v ? "sel" : ""}" data-v="${v}">${CE.reais(v)}</button>`).join("")}</div>
         <input type="number" id="d-valor" min="${ITENS[est.item].min}" step="1" inputmode="decimal" value="${est.valor}" style="margin-top:10px">
         <p class="nota" id="d-aviso"></p>
+        <div id="d-ganha"></div>
+        <div id="d-bump"></div>
         <div class="acoes"><button class="btn verde grande" id="d-ok">Continuar ➜</button></div>`);
       document.querySelectorAll("[data-item]").forEach(b => b.onclick = () => { est.item = b.dataset.item; if (est.valor < ITENS[est.item].min) est.valor = ITENS[est.item].valores[0]; render(); });
       document.querySelectorAll("[data-v]").forEach(b => b.onclick = () => { est.valor = +b.dataset.v; render(); });
@@ -109,6 +152,21 @@
         const it = itemPorValor();
         $("d-aviso").textContent = est.valor < ITENS[est.item].min ? `Para ${ITENS[est.item].nome} o mínimo é ${CE.reais(ITENS[est.item].min)}.` :
           it !== est.item && ITENS[it].min > ITENS[est.item].min ? `Com ${CE.reais(est.valor)} você já ganha: ${ITENS[it].nome} ${ITENS[it].icone}!` : "";
+        ganhaEBump();
+      };
+      // o que a pessoa ganha com o valor atual + oferta pra subir de nível (order bump)
+      const ganhaEBump = () => {
+        const v = est.valor;
+        if (!(v >= 1)) { $("d-ganha").innerHTML = ""; $("d-bump").innerHTML = ""; return; }
+        $("d-ganha").innerHTML = `<div class="ganha"><b>Com ${CE.reais(v)} você ganha:</b><ul>${beneficios(v).map(b => `<li>${b}</li>`).join("")}</ul></div>`;
+        const alvo = [20, 50, 100].find(x => x > v);
+        if (!alvo) { $("d-bump").innerHTML = `<div class="bump feito">👑 Você está no nível máximo da cidade. Muito obrigado!</div>`; return; }
+        const novos = beneficios(alvo).filter(b => !beneficios(v).includes(b) && !/Coins/.test(b));
+        $("d-bump").innerHTML = `<button type="button" class="bump" id="d-bump-btn">
+          <span class="bump-sel">☐</span>
+          <span class="bump-txt"><b>SIM! Quero adicionar só +${CE.reais(alvo - v)}</b> (total ${CE.reais(alvo)}) e ganhar também:
+            <span class="bump-lista">${novos.map(b => `<span>${b}</span>`).join("")}</span></span></button>`;
+        $("d-bump-btn").onclick = () => { est.valor = alvo; est.item = itemPorValor(); render(); };
       };
       avisoValor();
       $("d-ok").onclick = () => {

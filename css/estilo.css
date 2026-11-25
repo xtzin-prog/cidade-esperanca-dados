@@ -99,6 +99,28 @@ img { max-width: 100%; }
 .ranking li .ec { font-weight: 800; color: #8a6a00; white-space: nowrap; }
 .item-raro { display: flex; flex-direction: column; gap: 4px; align-items: center; }
 .banco-sec .cartao { margin-bottom: 10px; }
+/* popup de boas-vindas */
+.boasvindas { text-align: center; }
+.boasvindas h2 { margin: 0 0 8px !important; font-size: 2rem; }
+.bv-topo { font-size: 3.2rem; line-height: 1; animation: bate 1.2s ease-in-out infinite; }
+@keyframes bate { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
+.bv-texto { font-size: 1.06rem; margin: 5px 0; }
+.bv-prova { background: var(--creme); border: var(--borda); border-radius: 16px; padding: 8px 12px; margin: 10px 0; display: flex; flex-direction: column; gap: 6px; }
+.bv-prova .barra { height: 18px; }
+.bv-ganha { list-style: none; padding: 0; margin: 8px 0 12px; text-align: left; display: grid; gap: 5px; font-size: .98rem; }
+.bv-ganha li { background: #fff; border: 3px solid #1a1a1a; border-radius: 14px; padding: 6px 10px; }
+.bv-doar { width: 100%; animation: pulsa 1.6s ease-in-out infinite; }
+@keyframes pulsa { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+.bv-depois { background: none; border: 0; color: #555; text-decoration: underline; margin-top: 10px; font-weight: 700; font-size: .95rem; }
+/* o que ganha + order bump */
+.ganha { background: #eafbe9; border: 3px solid #2fb35a; border-radius: 16px; padding: 10px 12px; margin: 10px 0; }
+.ganha ul { margin: 6px 0 0; padding-left: 0; list-style: none; display: grid; gap: 4px; }
+.bump { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left; background: #fff7d6; border: 4px dashed #e8a400;
+  border-radius: 16px; padding: 12px; margin: 6px 0 4px; font-size: 1rem; cursor: pointer; animation: chama 2s ease-in-out infinite; }
+@keyframes chama { 0%, 100% { box-shadow: 0 0 0 0 rgba(232,164,0,.0); } 50% { box-shadow: 0 0 0 6px rgba(232,164,0,.25); } }
+.bump-sel { font-size: 1.6rem; line-height: 1; }
+.bump-lista { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-weight: 700; }
+.bump.feito { border-style: solid; animation: none; cursor: default; text-align: center; display: block; }
 .chips.peq .chip { font-size: .95rem; padding: .35em .8em; }
 .nivel-casa { display: flex; gap: 10px; align-items: center; background: var(--creme); border: var(--borda); border-radius: 16px; padding: 8px 12px; margin: 8px 0; }
 .nivel-casa .ic { font-size: 2rem; }
