@@ -102,7 +102,7 @@ img { max-width: 100%; }
 /* popup de boas-vindas */
 .boasvindas { text-align: center; }
 .boasvindas h2 { margin: 0 0 8px !important; font-size: 2rem; }
-.bv-topo { font-size: 3.2rem; line-height: 1; animation: bate 1.2s ease-in-out infinite; }
+.bv-topo { font-size: 3.2rem; line-height: 1; }
 @keyframes bate { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
 .bv-texto { font-size: 1.06rem; margin: 5px 0; }
 .bv-prova { background: var(--creme); border: var(--borda); border-radius: 16px; padding: 8px 12px; margin: 10px 0; display: flex; flex-direction: column; gap: 6px; }
@@ -110,7 +110,7 @@ img { max-width: 100%; }
 .bv-ganha { list-style: none; padding: 0; margin: 8px 0 12px; text-align: left; display: grid; gap: 5px; font-size: .98rem; }
 .bv-ganha li { background: #fff; border: 3px solid #1a1a1a; border-radius: 14px; padding: 6px 10px; }
 .bv-doar { width: 100%; animation: pulsa 1.6s ease-in-out infinite; }
-@keyframes pulsa { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+@keyframes pulsa { 0%, 100% { box-shadow: 0 6px 0 rgba(0,0,0,.28), 0 0 0 0 rgba(47,179,90,.0); } 50% { box-shadow: 0 6px 0 rgba(0,0,0,.28), 0 0 0 8px rgba(47,179,90,.28); } }
 .bv-depois { background: none; border: 0; color: #555; text-decoration: underline; margin-top: 10px; font-weight: 700; font-size: .95rem; }
 /* o que ganha + order bump */
 .ganha { background: #eafbe9; border: 3px solid #2fb35a; border-radius: 16px; padding: 10px 12px; margin: 10px 0; }
@@ -127,7 +127,7 @@ img { max-width: 100%; }
 .vantagens .cartao { display: flex; flex-direction: column; gap: 4px; }
 .outdoor-lista .cartao { margin-bottom: 10px; }
 @media (min-width: 700px) { .fundo-modal { align-items: center; } }
-.modal { width: 100%; max-width: 520px; max-height: 92vh; overflow: auto; position: relative; animation: sobe .25s ease-out; }
+.modal { width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; overflow-x: hidden; position: relative; animation: sobe .25s ease-out; }
 @keyframes sobe { from { transform: translateY(40px); opacity: 0; } }
 .modal .fechar { position: absolute; right: 12px; top: 12px; width: 42px; height: 42px; border-radius: 50%; border: var(--borda); background: #fff; font-weight: 900; }
 .modal h2 { margin: 4px 50px 6px 0; line-height: 1.05; font-size: 1.7rem; }
