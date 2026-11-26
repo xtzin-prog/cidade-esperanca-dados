@@ -38,12 +38,13 @@
     const precisa = {}; ORDEM_BAIRROS.forEach(b => precisa[b] = 0);
     mor.forEach(m => { precisa[m.rede] += (m.arroba && lojaDe[m.arroba.toLowerCase()]) ? 2 : 1; });
     const blocosPorBairro = {}; ORDEM_BAIRROS.forEach(b => blocosPorBairro[b] = Math.max(1, Math.ceil(precisa[b] / 4)));
-    const total = ORDEM_BAIRROS.reduce((s, b) => s + blocosPorBairro[b], 0) + 4; // + praça + banco + 2 livres
+    const total = ORDEM_BAIRROS.reduce((s, b) => s + blocosPorBairro[b], 0) + 5; // + praça + banco + escritório + 2 livres
     let R = 2; while ((2 * R + 1) ** 2 - 1 < total + 2) R++;
     const blocos = new Map(); // "bx,by" -> {tipo, bairro}
     blocos.set("0,0", { tipo: "hospital" });
     blocos.set("-1,0", { tipo: "praca" });
-    blocos.set("-2,2", { tipo: "banco" });   // Banco da Cidade: quadra inteira no canto esquerdo
+    blocos.set("-2,2", { tipo: "banco" });
+    blocos.set("2,-2", { tipo: "escritorio" });   // Escritório de Recompensas   // Banco da Cidade: quadra inteira no canto esquerdo
     const livres = espiral(R).filter(([bx, by]) => !blocos.has(bx + "," + by));
     // primeiro anel: 1 quarteirão por bairro
     const fila = livres.slice();
@@ -90,6 +91,8 @@
         for (let t = 0; t < 4; t++) { objs.push(t === 3 ? { tipo: "outdoor", i: i0 + 3, j: j0 + 3 } : { tipo: "arvore", i: i0 + 3, j: j0 + t, s: hash(k + t) }); if (t < 3) objs.push({ tipo: "arvore", i: i0 + t, j: j0 + 3, s: hash(k + "b" + t) }); }
       } else if (b.tipo === "banco") {
         objs.push({ tipo: "banco", i: i0, j: j0 });
+      } else if (b.tipo === "escritorio") {
+        objs.push({ tipo: "escritorio", i: i0, j: j0 });
       } else if (b.tipo === "praca") {
         objs.push({ tipo: "fonte", i: i0 + 1, j: j0 + 1 });
         const pos = [[0, 0], [3, 0], [0, 3], [3, 3], [1, 0], [2, 0], [0, 1], [0, 2], [3, 1], [3, 2], [1, 3], [2, 3]];
@@ -104,7 +107,7 @@
         }
       }
     }
-    objs.forEach(o => { o.prof = (o.tipo === "hospital" || o.tipo === "banco") ? o.i + o.j + 6 : (o.tipo === "fonte" || o.tipo === "casa" || o.tipo === "loja" || o.tipo === "lote") ? o.i + o.j + 2 : o.i + o.j + 1; });
+    objs.forEach(o => { o.prof = (o.tipo === "hospital" || o.tipo === "banco" || o.tipo === "escritorio") ? o.i + o.j + 6 : (o.tipo === "fonte" || o.tipo === "casa" || o.tipo === "loja" || o.tipo === "lote") ? o.i + o.j + 2 : o.i + o.j + 1; });
     objs.sort((a, b) => a.prof - b.prof);
     return { R, blocos, objs, ocupado, min: -R * PER, max: R * PER + PER };
   }
@@ -497,6 +500,26 @@
         if (B && B.contas && this.z > .6) this.pilula(topo[0], rot[1] - 4, `${B.contas} conta${B.contas === 1 ? "" : "s"} · ${B.total_investido} EC no cofre`, "#fff", "#1a1a1a", 8);
         const pe = P(o.i + 2, o.j + 4);
         box = [Math.min(rot[0], cc[0] - 110), rot[1] - 20, Math.max(rot[2], 220), pe[1] - rot[1] + 20];
+      } else if (o.tipo === "escritorio") {
+        this.poly([P(o.i, o.j), P(o.i + 4, o.j), P(o.i + 4, o.j + 4), P(o.i, o.j + 4)], "#dfe6ee", "#b8c2cc", 1.5);
+        const i0 = o.i + .8, j0 = o.j + .8, w = 2.4, d = 2.4, h = 120;
+        const cc = P(o.i + 2, o.j + 2);
+        c.fillStyle = "rgba(0,0,0,.18)"; c.beginPath(); c.ellipse(cc[0], cc[1] + 6, 95, 40, 0, 0, 7); c.fill();
+        this.caixa(i0, j0, w, d, h, "#cfe3f5", "#5a9ad8", "#3a7ac8");
+        const vid = noite > .4 ? "#ffe9a8" : "#a8d4f5";
+        for (let a = 0; a < 6; a++) for (let n = 0; n < 4; n++) {
+          this.face(i0, j0, w, d, h, "esq", .06 + n * .235, .24 + n * .235, .08 + a * .15, .19 + a * .15, vid);
+          this.face(i0, j0, w, d, h, "dir", .06 + n * .235, .24 + n * .235, .08 + a * .15, .19 + a * .15, noite > .4 ? "#f2c870" : "#7fb8e8");
+        }
+        this.face(i0, j0, w, d, h, "esq", .4, .6, 0, .1, "#2a4a6a");
+        const tp = [P(i0 + w / 2, j0 + d / 2)[0], P(i0 + w / 2, j0 + d / 2)[1] - h - 30 - Math.sin(t * 2) * 3];
+        c.fillStyle = "#f2c230"; c.strokeStyle = "#a07a10"; c.lineWidth = 2;
+        c.beginPath(); c.moveTo(tp[0] - 16, tp[1] - 22); c.lineTo(tp[0] + 16, tp[1] - 22); c.quadraticCurveTo(tp[0] + 14, tp[1] + 2, tp[0], tp[1] + 4);
+        c.quadraticCurveTo(tp[0] - 14, tp[1] + 2, tp[0] - 16, tp[1] - 22); c.fill(); c.stroke();
+        c.fillRect(tp[0] - 3, tp[1] + 4, 6, 9); c.fillRect(tp[0] - 10, tp[1] + 13, 20, 5); c.strokeRect(tp[0] - 10, tp[1] + 13, 20, 5);
+        const rot = this.pilula(tp[0], tp[1] - 30, "🏆 ESCRITÓRIO DE RECOMPENSAS", "#ffd23a", "#1a1a1a", 11);
+        const pe = P(o.i + 2, o.j + 4);
+        box = [rot[0], rot[1] - 10, rot[2], pe[1] - rot[1] + 10];
       } else if (o.tipo === "outdoor") {
         const cc = P(o.i + .5, o.j + .5), msgs = (this.dados && this.dados.outdoor) || [];
         const W = 92, H = 44, y0 = cc[1] - 26;
@@ -642,8 +665,8 @@
       c.fillStyle = "#4a4e58";
       for (let r = L.min; r <= L.max; r += PER) { const [x] = mp(r, 0); c.fillRect(x, 0, k, S); const [, y] = mp(0, r); c.fillRect(0, y, S, k); }
       for (const o of L.objs) {
-        const cor = o.tipo === "casa" ? o.cor : o.tipo === "loja" ? "#ffd23a" : o.tipo === "hospital" ? "#fff" : o.tipo === "banco" ? "#f2c230" : o.tipo === "estatua" ? "#ffd23a" : null;
-        if (!cor) continue; const [x, y] = mp(o.i, o.j); const sz = o.tipo === "hospital" ? 3 * k : o.tipo === "banco" ? 4 * k : (o.tipo === "casa" || o.tipo === "loja") ? 2 * k : k;
+        const cor = o.tipo === "casa" ? o.cor : o.tipo === "loja" ? "#ffd23a" : o.tipo === "hospital" ? "#fff" : o.tipo === "banco" ? "#f2c230" : o.tipo === "escritorio" ? "#5a9ad8" : o.tipo === "estatua" ? "#ffd23a" : null;
+        if (!cor) continue; const [x, y] = mp(o.i, o.j); const sz = o.tipo === "hospital" ? 3 * k : (o.tipo === "banco" || o.tipo === "escritorio") ? 4 * k : (o.tipo === "casa" || o.tipo === "loja") ? 2 * k : k;
         c.fillStyle = cor; c.fillRect(x, y, sz, sz);
       }
       const [ci, cj] = this.mundoParaTile(this.cx, this.cy), [x, y] = mp(ci, cj);
@@ -716,6 +739,7 @@
     hospital() { return this.lay.objs.find(o => o.tipo === "hospital"); }
     outdoor() { return this.lay.objs.find(o => o.tipo === "outdoor"); }
     banco() { return this.lay.objs.find(o => o.tipo === "banco"); }
+    escritorio() { return this.lay.objs.find(o => o.tipo === "escritorio"); }
   }
 
   // avatar em SVG (pro balcão da loja e cards)

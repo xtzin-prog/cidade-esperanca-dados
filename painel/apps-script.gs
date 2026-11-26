@@ -58,6 +58,8 @@ const COLS_BANCO = ["@ (minúsculo)", "@", "Conta aberta em", "Cofre base (EC)",
 const B = { k: 0, arroba: 1, aberta: 2, base: 3, desde: 4, dep: 5, resg: 6, gasto: 7, itens: 8, rank: 9, jur: 10 };
 const JUROS_DIA = 0.5;   // 50% ao dia sobre o que está guardado (juros simples)
 const ITENS = { ouro: { nome: "Telhado de ouro", preco: 60 }, dragao: { nome: "Pet dragão", preco: 30 } };
+// contas do dono do perfil (não entram no ranking de apoiadores)
+const FORA_DO_RANKING = ["@maria", "@teste2", "@joao154", "@testemorador"];
 const ACOES_BANCO = ["banco", "abrir", "depositar", "resgatar", "comprar", "ranking"];
 
 function configurar() {
@@ -137,6 +139,9 @@ function doGet() {
   });
   out.arrecadado = Math.round(out.arrecadado * 100) / 100;
   out.banco = bancoPublico_();
+  // Escritório de Recompensas: os 6 maiores apoiadores (soma das doações com ✅), só o @ — valores nunca saem daqui
+  out.apoiadores = grupos.filter(g => g.arroba && FORA_DO_RANKING.indexOf(g.arroba.toLowerCase()) < 0)
+    .sort((a, b) => b.total - a.total || String(a.data).localeCompare(String(b.data))).slice(0, 6).map(g => g.arroba);
   const txt = JSON.stringify(out);
   cache.put("cidade", txt, 60);
   return ContentService.createTextOutput(txt).setMimeType(ContentService.MimeType.JSON);

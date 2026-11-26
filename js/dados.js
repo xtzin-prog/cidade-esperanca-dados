@@ -48,6 +48,7 @@
       if (!TELHADOS[m.telhado]) m.telhado = "classico"; if (!(m.pet in PETS)) m.pet = ""; if (!(m.carro in CARROS)) m.carro = "";
       m.placa = String(m.placa || "").slice(0, 20);
     });
+    v.apoiadores = (v.apoiadores || []).filter(Boolean).map(String).slice(0, 6);
     v.banco = Object.assign({ contas: 0, total_investido: 0, ranking: [] }, v.banco || {});
     v.banco.ranking = (v.banco.ranking || []).filter(x => x && x.arroba).map(x => ({ arroba: String(x.arroba), investido: Math.max(0, Math.floor(Number(x.investido) || 0)) }));
     v.outdoor = (v.outdoor || []).filter(o => o && o.frase).map(o => ({ arroba: String(o.arroba || ""), frase: String(o.frase).slice(0, 60) }));
@@ -76,6 +77,7 @@
     d.estatuas = (fixo.estatuas || []).concat(vivo.estatuas || []);
     d.outdoor = (fixo.outdoor || []).concat(vivo.outdoor || []);
     d.banco = vivo.banco || fixo.banco || null;
+    d.apoiadores = vivo.apoiadores || [];
     d.arrecadado = (Number(fixo.arrecadado) || 0) + (Number(vivo.arrecadado) || 0);
     d.doacoes = (Number(fixo.doacoes) || 0) + (Number(vivo.doacoes) || 0);
     return d;

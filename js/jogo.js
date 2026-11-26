@@ -96,6 +96,7 @@
     else if (o.tipo === "estatua") cardEstatua(o);
     else if (o.tipo === "outdoor") cardOutdoor();
     else if (o.tipo === "banco") abrirBanco();
+    else if (o.tipo === "escritorio") abrirEscritorio();
   }
 
   function cardOutdoor() {
@@ -298,6 +299,27 @@
     $("bk-casa").onclick = ev => { ev.preventDefault(); abrirChave(); };
   }
 
+  // ---------------- 🏆 Escritório de Recompensas (sem sorteio: prêmio por mérito + recompensa garantida)
+  function abrirEscritorio() {
+    const es = jogo.escritorio(); if (es) jogo.voarPara(es.i + 2, es.j + 2, Math.max(jogo.zMin, 1.1));
+    const top = dados.apoiadores || [];
+    const premio = ["🌐 Site vitalício + 3 meses de artes", "🎨 3 meses de artes", "🎨 3 meses de artes", "🎨 1 mês de artes", "🎨 1 mês de artes", "🎨 1 mês de artes"];
+    const linhas = premio.map((p, n) => `<li><span>${["🥇", "🥈", "🥉"][n] || (n + 1) + "º"}</span><b>${top[n] ? e(top[n]) : "<i style='color:#999'>vaga aberta</i>"}</b><span class="ec">${p}</span></li>`).join("");
+    modal(`<h2>🏆 Escritório de Recompensas</h2>
+      <p>Aqui <b>ninguém depende de sorte</b>: quem ajuda ganha. 💛</p>
+      <h3 style="margin:12px 0 4px">🎁 Recompensa garantida (por doação)</h3>
+      <ul class="bv-ganha">
+        <li>💚 <b>R$ 30</b> ou mais: 1 arte pra sua rede social</li>
+        <li>💚 <b>R$ 100</b> ou mais: 1 mês de artes pras suas redes</li>
+        <li>💚 <b>R$ 300</b> ou mais: um site vitalício pra você</li>
+      </ul>
+      <h3 style="margin:12px 0 4px">🏆 Ranking dos maiores apoiadores</h3>
+      <p class="nota" style="margin:0">Quando a meta da cirurgia for alcançada, os 6 que mais ajudaram (somando as doações do mesmo @) ganham:</p>
+      <ol class="ranking">${linhas}</ol>
+      <p class="nota">O ranking mostra só o @, nunca o valor de ninguém. Recompensas entregues depois que a doação for confirmada.</p>
+      <div class="acoes"><a class="btn verde grande" href="index.html#doar">💚 Quero ajudar</a></div>`);
+  }
+
   // ---------------- dentro da lojinha
   function entraLoja(o) {
     const l = o.l, cor = CE.CORES_CASA[l.cor] || "#e8402a", ic = CE.TIPOS_LOJA[l.tipo] || "🛍️";
@@ -335,6 +357,7 @@
   $("b-mini").onclick = () => $("minimapa").classList.toggle("on");
   $("b-chave").onclick = abrirChave;
   $("b-banco").onclick = abrirBanco;
+  if ($("b-escritorio")) $("b-escritorio").onclick = abrirEscritorio;
   $("b-busca").onclick = () => {
     modal(`<h2>🔍 Cadê minha casa?</h2><p>Digite o seu @ e o drone te leva até lá.</p>
       <form id="f-busca"><input type="text" id="i-busca" placeholder="@seu_arroba" autocomplete="off" autocapitalize="none">
@@ -393,6 +416,7 @@
   const q = new URLSearchParams(location.search);
   if (q.get("chave") !== null) setTimeout(abrirChave, 400);
   else if (q.get("banco") !== null) setTimeout(abrirBanco, 400);
+  else if (q.get("recompensas") !== null) setTimeout(abrirEscritorio, 400);
   else if (q.get("morador")) setTimeout(() => procura(q.get("morador")), 400);
   else if (q.get("loja")) { const o = jogo.acharLoja(q.get("loja")); if (o) setTimeout(() => entraLoja(o), 400); }
 })();

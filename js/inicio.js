@@ -128,7 +128,10 @@
     const b = [`${nivelCasa(v)} com o seu @ e profissão`, "🔑 Chave pra decorar a casa", `🪙 ${Math.floor(v)} Esperança Coins (moeda do jogo)`];
     if (v >= 20) b.push("📣 Seu recado no outdoor da cidade");
     if (v >= 50) b.push("🛍️ Lojinha divulgada no próximo vídeo");
+    if (v >= 30) b.push("🎨 1 arte pra sua rede social (feita por mim)");
     if (v >= 100) b.push("🗽 Estátua dourada na praça");
+    if (v >= 100) b.push("🎨 1 mês de artes pras suas redes");
+    if (v >= 300) b.push("🌐 Um site vitalício pra você");
     return b;
   }
   function itemPorValor() { return est.valor >= 100 ? "estatua" : est.valor >= 50 ? "lojinha" : "morador"; }
@@ -159,7 +162,7 @@
         const v = est.valor;
         if (!(v >= 1)) { $("d-ganha").innerHTML = ""; $("d-bump").innerHTML = ""; return; }
         $("d-ganha").innerHTML = `<div class="ganha"><b>Com ${CE.reais(v)} você ganha:</b><ul>${beneficios(v).map(b => `<li>${b}</li>`).join("")}</ul></div>`;
-        const alvo = [20, 50, 100].find(x => x > v);
+        const alvo = [20, 30, 50, 100, 300].find(x => x > v);
         if (!alvo) { $("d-bump").innerHTML = `<div class="bump feito">👑 Você está no nível máximo da cidade. Muito obrigado!</div>`; return; }
         const novos = beneficios(alvo).filter(b => !beneficios(v).includes(b) && !/Coins/.test(b));
         $("d-bump").innerHTML = `<button type="button" class="bump" id="d-bump-btn">
